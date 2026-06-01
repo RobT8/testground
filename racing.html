@@ -27,7 +27,7 @@
   <canvas id="c" width="360" height="500"></canvas>
   <div id="overlay">
     <div id="msg">LANE RACER</div>
-    <div id="submsg">Start in 100th place.<br>Overtake everyone over 10 laps.<br><br>LEFT / RIGHT to change lane<br>ACCEL to go faster</div>
+    <div id="submsg">Start in 100th place.<br>Overtake everyone over 10 laps.<br><br>LEFT / RIGHT arrows to change lane<br>CTRL to accelerate</div>
     <button class="btn" id="start-btn">START RACE</button>
   </div>
 </div>
@@ -297,21 +297,32 @@ function setupControls() {
   document.addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
     if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
-    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') keys.accel = true;
+    if (e.key === 'Control') keys.accel = true;
     e.preventDefault();
   });
   document.addEventListener('keyup', e => {
     if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
     if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
-    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') keys.accel = false;
+    if (e.key === 'Control') keys.accel = false;
   });
 
-  // Touch buttons
+  // Touch buttons - use pointerdown/pointerup on document to avoid losing events when finger slides
   function addBtn(id, key) {
     const el = document.getElementById(id);
-    el.addEventListener('pointerdown', e => { keys[key] = true; el.classList.add('pressed'); e.preventDefault(); });
-    el.addEventListener('pointerup', e => { keys[key] = false; el.classList.remove('pressed'); });
-    el.addEventListener('pointerleave', e => { keys[key] = false; el.classList.remove('pressed'); });
+    let pointerId = null;
+    el.addEventListener('pointerdown', e => {
+      pointerId = e.pointerId;
+      el.setPointerCapture(e.pointerId);
+      keys[key] = true;
+      el.classList.add('pressed');
+      e.preventDefault();
+    });
+    el.addEventListener('pointerup', e => {
+      if (e.pointerId === pointerId) { keys[key] = false; el.classList.remove('pressed'); pointerId = null; }
+    });
+    el.addEventListener('pointercancel', e => {
+      if (e.pointerId === pointerId) { keys[key] = false; el.classList.remove('pressed'); pointerId = null; }
+    });
   }
   addBtn('btn-left', 'left');
   addBtn('btn-right', 'right');
