@@ -287,8 +287,67 @@ function gameLoop(timestamp) {
   const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
   lastTime = timestamp;
   update(dt);
+  updateEngineSound();
   draw();
   requestAnimationFrame(gameLoop);
+}
+
+// Engine audio
+let audioCtx = null, engineOsc = null, engineGain = null, noiseSource = null, noiseGain = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // Oscillator for engine tone
+  engineOsc = audioCtx.createOscillator();
+  engineOsc.type = 'sawtooth';
+  engineOsc.frequency.value = 80;
+
+  // Gain for engine tone
+  engineGain = audioCtx.createGain();
+  engineGain.gain.value = 0;
+
+  // White noise for rumble
+  const bufferSize = audioCtx.sampleRate * 2;
+  const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  noiseSource = audioCtx.createBufferSource();
+  noiseSource.buffer = noiseBuffer;
+  noiseSource.loop = true;
+
+  // Low-pass filter on noise to make it rumbly
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 300;
+
+  noiseGain = audioCtx.createGain();
+  noiseGain.gain.value = 0;
+
+  engineOsc.connect(engineGain).connect(audioCtx.destination);
+  noiseSource.connect(filter).connect(noiseGain).connect(audioCtx.destination);
+
+  engineOsc.start();
+  noiseSource.start();
+}
+
+function updateEngineSound() {
+  if (!audioCtx || state !== 'racing') return;
+  const t = audioCtx.currentTime;
+  const speedFrac = playerSpeed / 400;
+
+  // Pitch rises with speed
+  engineOsc.frequency.setTargetAtTime(80 + speedFrac * 220, t, 0.1);
+
+  if (keys.accel && playerSpeed > 5) {
+    engineGain.gain.setTargetAtTime(0.08, t, 0.05);
+    noiseGain.gain.setTargetAtTime(0.04 + speedFrac * 0.06, t, 0.05);
+  } else {
+    // Idle / decel - quieter and lower pitch
+    engineGain.gain.setTargetAtTime(playerSpeed > 5 ? 0.03 : 0, t, 0.15);
+    noiseGain.gain.setTargetAtTime(playerSpeed > 5 ? 0.015 : 0, t, 0.15);
+  }
 }
 
 // Controls
@@ -329,6 +388,7 @@ function setupControls() {
   addBtn('btn-accel', 'accel');
 
   document.getElementById('start-btn').addEventListener('click', () => {
+    initAudio();
     initRace();
     state = 'racing';
     document.getElementById('overlay').style.display = 'none';
