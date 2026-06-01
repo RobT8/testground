@@ -8,27 +8,23 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: monospace; color: white; }
   canvas { border: 2px solid #444; display: block; outline: none; }
-  #ui { display: flex; gap: 40px; padding: 10px 0; font-size: 14px; }
   #controls { display: flex; gap: 10px; padding: 10px 0; }
-  .btn { background: #333; border: 2px solid #666; color: white; padding: 12px 24px; font-size: 16px; font-family: monospace; cursor: pointer; border-radius: 4px; user-select: none; }
+  .btn { background: #333; border: 2px solid #666; color: white; padding: 12px 24px; font-size: 16px; font-family: monospace; cursor: pointer; border-radius: 4px; user-select: none; touch-action: none; }
   .btn:active, .btn.pressed { background: #555; border-color: #aaa; }
-  #overlay { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+  #overlay { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: rgba(0,0,0,0.75); width: 100%; height: 100%; }
   #msg { font-size: 28px; font-weight: bold; text-align: center; }
-  #submsg { font-size: 14px; color: #aaa; text-align: center; }
+  #submsg { font-size: 13px; color: #aaa; text-align: center; line-height: 1.8; }
+  #start-btn { background: #333; border: 2px solid #666; color: white; padding: 12px 32px; font-size: 18px; font-family: monospace; cursor: pointer; border-radius: 4px; }
+  #start-btn:hover { background: #555; }
 </style>
 </head>
 <body>
-<div id="ui">
-  <span id="lap-display">Lap: 1/10</span>
-  <span id="pos-display">Position: 100</span>
-  <span id="speed-display">Speed: 0</span>
-</div>
 <div style="position:relative">
-  <canvas id="c" width="360" height="500" tabindex="0"></canvas>
+  <canvas id="c" width="360" height="520" tabindex="0"></canvas>
   <div id="overlay">
     <div id="msg">LANE RACER</div>
-    <div id="submsg">Start in 100th place.<br>Overtake everyone over 10 laps.<br><br>LEFT / RIGHT arrows to change lane<br>CTRL to accelerate</div>
-    <button class="btn" id="start-btn">START RACE</button>
+    <div id="submsg">Start in 100th. Win by reaching 1st after 10 laps.<br><br>◀ ▶ arrows — change lane<br>CTRL — accelerate (release to slow)<br><br>Hit a car = lose a life (3 lives)<br>Hit a wall = slowed for 5 seconds</div>
+    <button id="start-btn">START RACE</button>
   </div>
 </div>
 <div id="controls">
@@ -42,35 +38,18 @@ const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 
-// Game state
-let state = 'menu'; // menu, racing, win, lose
-let playerLane = 1; // 0,1,2
-let playerSpeed = 0;
-let playerPos = 0; // track distance covered
-let lap = 1;
-const TOTAL_LAPS = 10;
-const TRACK_LENGTH = 3000; // units per lap
-
-// Lane x positions
 const LANE_X = [60, 180, 300];
-const LANE_W = 80;
+const PLAYER_Y = 420;
+const TOTAL_LAPS = 10;
+const TRACK_LENGTH = 3000;
+const MAX_SPEED = 420;
 
-// Player visual y (fixed near bottom)
-const PLAYER_Y = 400;
-
-// Road scroll offset
-let roadOffset = 0;
-
-// Other cars - each has: lane, trackPos, speed, color, overtaken
+let state = 'menu';
+let playerLane, playerSpeed, playerPos, lap, roadOffset, stripeOffset;
+let playerRacePos, lives, wallPenalty, crashFlash, lastLaneChange;
 let cars = [];
-let playerRacePos = 100; // current race position
 
-// Keys / touch
 const keys = { left: false, right: false, accel: false };
-let lastLaneChange = 0;
-const LANE_CHANGE_COOLDOWN = 300; // ms
-
-// Timing
 let lastTime = 0;
 
 function initRace() {
@@ -79,32 +58,26 @@ function initRace() {
   playerPos = 0;
   lap = 1;
   roadOffset = 0;
+  stripeOffset = 0;
   playerRacePos = 100;
+  lives = 3;
+  wallPenalty = 0;   // seconds remaining of wall slow
+  crashFlash = 0;    // seconds remaining of red flash
   lastLaneChange = 0;
 
-  // Create 99 other cars spread around the track
   cars = [];
   for (let i = 0; i < 99; i++) {
-    // Spread cars across laps 1-10 of the track
-    // Cars closer to position 1 (leaders) are faster and further ahead
-    // Position 1 car is at the front, position 99 car is just ahead of player
-    const rank = i + 1; // 1 = leader, 99 = just ahead of player
-    // How far ahead of player start position
+    const rank = i + 1; // 1=leader(fast,far), 99=tail(slow,near)
     const aheadFraction = rank / 99;
-    const trackPos = aheadFraction * TRACK_LENGTH * TOTAL_LAPS * 0.9;
-    // Speed: leaders go faster. rank 1 = fastest, rank 99 = slowest
-    // Player needs to be able to overtake all of them
-    const baseSpeed = 60 + (rank / 99) * 80; // rank 99 = ~141, rank 1 = ~60... wait
-    // Actually rank 99 is closest/slowest, rank 1 is furthest/fastest
-    // Let's say: position 99 (just ahead) is slow, position 1 (leader) is fast
-    const speed = 60 + ((99 - rank) / 99) * 100; // rank 99 = 60, rank 1 = ~160
+    const trackPos = aheadFraction * TRACK_LENGTH * TOTAL_LAPS * 0.88;
+    // Leaders much faster - harder to catch
+    const speed = 55 + ((99 - rank) / 99) * 130; // rank99=55, rank1=185
     cars.push({
       rank,
       lane: Math.floor(Math.random() * 3),
       trackPos,
       speed,
       color: carColor(rank),
-      overtaken: false,
     });
   }
 }
@@ -114,31 +87,37 @@ function carColor(rank) {
   return `hsl(${hue}, 80%, 55%)`;
 }
 
-// Road stripes state
-let stripeOffset = 0;
-
 function update(dt) {
   if (state !== 'racing') return;
 
+  const wallSlowed = wallPenalty > 0;
+  if (wallPenalty > 0) wallPenalty = Math.max(0, wallPenalty - dt);
+  if (crashFlash > 0) crashFlash = Math.max(0, crashFlash - dt);
+
   // Acceleration
-  const MAX_SPEED = 400;
-  const ACCEL = 200;
-  const DECEL = 150;
+  const ACCEL = 220;
+  const DECEL = 160;
+  const speedCap = wallSlowed ? MAX_SPEED * 0.3 : MAX_SPEED;
   if (keys.accel) {
-    playerSpeed = Math.min(MAX_SPEED, playerSpeed + ACCEL * dt);
+    playerSpeed = Math.min(speedCap, playerSpeed + ACCEL * dt);
   } else {
     playerSpeed = Math.max(0, playerSpeed - DECEL * dt);
   }
+  if (wallSlowed) playerSpeed = Math.min(playerSpeed, speedCap);
 
   // Lane change
   const now = performance.now();
-  if (now - lastLaneChange > LANE_CHANGE_COOLDOWN) {
-    if (keys.left && playerLane > 0) {
-      playerLane--;
-      lastLaneChange = now;
-    } else if (keys.right && playerLane < 2) {
-      playerLane++;
-      lastLaneChange = now;
+  if (now - lastLaneChange > 280) {
+    if (keys.left && playerLane > 0) { playerLane--; lastLaneChange = now; }
+    else if (keys.right && playerLane < 2) { playerLane++; lastLaneChange = now; }
+  }
+
+  // Wall collision: if player tries to go beyond lane 0 or lane 2 edges
+  // Actually enforce: if key held against wall, apply wall penalty
+  if ((keys.left && playerLane === 0) || (keys.right && playerLane === 2)) {
+    if (playerSpeed > 80 && wallPenalty === 0 && now - lastLaneChange < 50) {
+      wallPenalty = 5;
+      playerSpeed *= 0.3;
     }
   }
 
@@ -147,111 +126,155 @@ function update(dt) {
   roadOffset += dist;
   stripeOffset = (stripeOffset + dist) % 80;
 
-  // Check lap completion
-  const currentLapPos = playerPos % TRACK_LENGTH;
-  const prevLapCount = lap;
   lap = Math.floor(playerPos / TRACK_LENGTH) + 1;
   if (lap > TOTAL_LAPS) {
-    // Race over
-    if (playerRacePos === 1) {
-      state = 'win';
-    } else {
-      state = 'lose';
-    }
+    state = playerRacePos === 1 ? 'win' : 'lose';
     showEndScreen();
     return;
   }
 
-  // Check overtakes: any car whose trackPos < playerPos that hasn't been overtaken
-  // Re-count position each frame
+  // Recalculate race position
   let pos = 1;
-  for (const car of cars) {
-    if (car.trackPos > playerPos) pos++;
-  }
+  for (const car of cars) { if (car.trackPos > playerPos) pos++; }
   playerRacePos = pos;
 
-  // Collision check - if player is in same lane as a car very close ahead, slow down
+  // Car collision: same lane, car just ahead (within 55 units), player faster
   for (const car of cars) {
     const diff = car.trackPos - playerPos;
-    if (diff > 0 && diff < 80 && car.lane === playerLane) {
-      // Car is just ahead in same lane - push player back
-      playerSpeed = Math.min(playerSpeed, car.speed * 0.9);
+    if (diff > 0 && diff < 55 && car.lane === playerLane) {
+      if (playerSpeed > car.speed + 20) {
+        // Crash!
+        lives--;
+        crashFlash = 1.2;
+        playerSpeed = 0;
+        // Bounce player back slightly
+        playerPos -= 60;
+        if (lives <= 0) {
+          state = 'lose';
+          showEndScreen();
+          return;
+        }
+        break;
+      } else {
+        // Just blocked
+        playerSpeed = Math.min(playerSpeed, car.speed * 0.95);
+      }
     }
   }
-
-  // Update UI
-  document.getElementById('lap-display').textContent = `Lap: ${Math.min(lap, TOTAL_LAPS)}/10`;
-  document.getElementById('pos-display').textContent = `Pos: ${playerRacePos}`;
-  document.getElementById('speed-display').textContent = `Speed: ${Math.round(playerSpeed)}`;
 }
 
 function draw() {
-  // Background
   ctx.fillStyle = '#2a2a2a';
   ctx.fillRect(0, 0, W, H);
 
   // Road
-  ctx.fillStyle = '#444';
+  ctx.fillStyle = '#484848';
   ctx.fillRect(20, 0, W - 40, H);
 
-  // Lane dividers (dashed)
-  ctx.strokeStyle = '#fff8';
+  // Kerb stripes on edges
+  for (let y = -80; y < H; y += 40) {
+    const sy = (y + stripeOffset * 0.5) % (H + 80) - 80;
+    ctx.fillStyle = (Math.floor(sy / 20) % 2 === 0) ? '#cc2222' : '#eeeeee';
+    ctx.fillRect(20, sy, 8, 20);
+    ctx.fillRect(W - 28, sy, 8, 20);
+  }
+
+  // Lane dividers dashed
+  ctx.strokeStyle = '#fff6';
   ctx.lineWidth = 2;
   ctx.setLineDash([40, 40]);
   ctx.lineDashOffset = -stripeOffset;
-  for (let x of [120, 240]) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, H);
-    ctx.stroke();
+  for (const x of [120, 240]) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
   }
   ctx.setLineDash([]);
 
-  // Road edges
-  ctx.fillStyle = '#888';
-  ctx.fillRect(20, 0, 4, H);
-  ctx.fillRect(W - 24, 0, 4, H);
+  // Other cars
+  const VIEW_RANGE = 620;
+  // Sort by relPos descending so farther cars drawn first
+  const visible = cars
+    .map(c => ({ car: c, rel: c.trackPos - playerPos }))
+    .filter(({ rel }) => rel > -60 && rel < VIEW_RANGE)
+    .sort((a, b) => b.rel - a.rel);
 
-  // Draw other cars visible on screen
-  // Map track positions to screen y based on distance from player
-  const VIEW_RANGE = 600; // how much track we see ahead/behind
-  for (const car of cars) {
-    const relPos = car.trackPos - playerPos;
-    if (relPos < -50 || relPos > VIEW_RANGE) continue;
-    // y: relPos=0 => PLAYER_Y, relPos=VIEW_RANGE => top of screen
-    const y = PLAYER_Y - (relPos / VIEW_RANGE) * (PLAYER_Y - 60);
-    const scale = 0.4 + 0.6 * (1 - relPos / VIEW_RANGE);
+  for (const { car, rel } of visible) {
+    const y = PLAYER_Y - (rel / VIEW_RANGE) * (PLAYER_Y - 60);
+    const scale = 0.35 + 0.65 * (1 - rel / VIEW_RANGE);
     drawCar(LANE_X[car.lane], y, scale, car.color, false);
   }
 
-  // Player car
-  drawCar(LANE_X[playerLane], PLAYER_Y, 1.0, '#00cfff', true);
+  // Wall penalty effect - orange tint edges
+  if (wallPenalty > 0) {
+    ctx.fillStyle = `rgba(255,140,0,${Math.min(0.35, wallPenalty * 0.08)})`;
+    ctx.fillRect(0, 0, W, H);
+  }
 
-  // Gradient overlay top (distance fade)
-  const grad = ctx.createLinearGradient(0, 0, 0, 80);
+  // Player car (flash red on crash)
+  const playerColor = crashFlash > 0 && Math.floor(crashFlash * 8) % 2 === 0 ? '#ff2222' : '#00cfff';
+  drawCar(LANE_X[playerLane], PLAYER_Y, 1.0, playerColor, true);
+
+  // Top fade
+  const grad = ctx.createLinearGradient(0, 0, 0, 70);
   grad.addColorStop(0, '#2a2a2a');
   grad.addColorStop(1, 'transparent');
   ctx.fillStyle = grad;
-  ctx.fillRect(20, 0, W - 40, 80);
+  ctx.fillRect(0, 0, W, 70);
+
+  // HUD
+  drawHUD();
+}
+
+function drawHUD() {
+  // Background bar
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  ctx.fillRect(0, 0, W, 44);
+
+  ctx.font = 'bold 13px monospace';
+  ctx.textBaseline = 'middle';
+
+  // Lives (hearts)
+  ctx.fillStyle = '#ff4466';
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = i < lives ? '#ff4466' : '#444';
+    ctx.font = '18px monospace';
+    ctx.fillText('♥', 10 + i * 24, 22);
+  }
+
+  ctx.font = 'bold 13px monospace';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.fillText(`LAP ${Math.min(lap, TOTAL_LAPS)} / ${TOTAL_LAPS}`, W / 2, 15);
+
+  const posColor = playerRacePos <= 3 ? '#ffd700' : playerRacePos <= 10 ? '#88ff88' : '#ffffff';
+  ctx.fillStyle = posColor;
+  ctx.fillText(`POS ${playerRacePos}`, W / 2, 31);
+
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#aaaaaa';
+  ctx.fillText(`${Math.round(playerSpeed)} km/h`, W - 8, 15);
+
+  if (wallPenalty > 0) {
+    ctx.fillStyle = '#ff8800';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText(`WALL! ${wallPenalty.toFixed(1)}s`, W - 8, 31);
+  }
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
 }
 
 function drawCar(cx, cy, scale, color, isPlayer) {
-  const cw = 36 * scale;
-  const ch = 60 * scale;
-  const x = cx - cw / 2;
-  const y = cy - ch / 2;
+  const cw = 36 * scale, ch = 60 * scale;
+  const x = cx - cw / 2, y = cy - ch / 2;
 
-  // Body
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.roundRect(x, y, cw, ch, 6 * scale);
   ctx.fill();
 
-  // Windscreen
   ctx.fillStyle = isPlayer ? '#001a33' : '#33444488';
   ctx.fillRect(x + cw * 0.15, y + ch * 0.15, cw * 0.7, ch * 0.25);
 
-  // Wheels
   ctx.fillStyle = '#111';
   const ww = 7 * scale, wh = 12 * scale;
   ctx.fillRect(x - ww * 0.6, y + ch * 0.1, ww, wh);
@@ -260,7 +283,6 @@ function drawCar(cx, cy, scale, color, isPlayer) {
   ctx.fillRect(x + cw - ww * 0.4, y + ch * 0.65, ww, wh);
 
   if (isPlayer) {
-    // Headlight glow
     ctx.fillStyle = '#ffffaa';
     ctx.fillRect(x + cw * 0.1, y + ch * 0.85, cw * 0.25, ch * 0.08);
     ctx.fillRect(x + cw * 0.65, y + ch * 0.85, cw * 0.25, ch * 0.08);
@@ -274,13 +296,64 @@ function showEndScreen() {
   const btn = document.getElementById('start-btn');
   overlay.style.display = 'flex';
   if (state === 'win') {
-    msg.textContent = '🏆 YOU WIN!';
-    submsg.textContent = 'You came 1st place after 10 laps!';
+    msg.innerHTML = '&#127942; YOU WIN!';
+    submsg.textContent = 'You reached 1st place after 10 laps!';
+  } else if (lives <= 0) {
+    msg.textContent = 'CRASHED OUT!';
+    submsg.textContent = `You ran out of lives in position ${playerRacePos}.`;
   } else {
     msg.textContent = 'RACE OVER';
     submsg.textContent = `You finished in position ${playerRacePos}.\nBetter luck next time!`;
   }
   btn.textContent = 'RACE AGAIN';
+}
+
+// Engine audio
+let audioCtx = null, engineOsc = null, engineGain = null, noiseSource = null, noiseGain = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  engineOsc = audioCtx.createOscillator();
+  engineOsc.type = 'sawtooth';
+  engineOsc.frequency.value = 80;
+  engineGain = audioCtx.createGain();
+  engineGain.gain.value = 0;
+
+  const bufferSize = audioCtx.sampleRate * 2;
+  const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  noiseSource = audioCtx.createBufferSource();
+  noiseSource.buffer = noiseBuffer;
+  noiseSource.loop = true;
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 300;
+
+  noiseGain = audioCtx.createGain();
+  noiseGain.gain.value = 0;
+
+  engineOsc.connect(engineGain).connect(audioCtx.destination);
+  noiseSource.connect(filter).connect(noiseGain).connect(audioCtx.destination);
+  engineOsc.start();
+  noiseSource.start();
+}
+
+function updateEngineSound() {
+  if (!audioCtx || state !== 'racing') return;
+  const t = audioCtx.currentTime;
+  const speedFrac = playerSpeed / MAX_SPEED;
+  engineOsc.frequency.setTargetAtTime(80 + speedFrac * 220, t, 0.1);
+  if (keys.accel && playerSpeed > 5) {
+    engineGain.gain.setTargetAtTime(0.08, t, 0.05);
+    noiseGain.gain.setTargetAtTime(0.04 + speedFrac * 0.06, t, 0.05);
+  } else {
+    engineGain.gain.setTargetAtTime(playerSpeed > 5 ? 0.03 : 0, t, 0.15);
+    noiseGain.gain.setTargetAtTime(playerSpeed > 5 ? 0.015 : 0, t, 0.15);
+  }
 }
 
 function gameLoop(timestamp) {
@@ -292,67 +365,7 @@ function gameLoop(timestamp) {
   requestAnimationFrame(gameLoop);
 }
 
-// Engine audio
-let audioCtx = null, engineOsc = null, engineGain = null, noiseSource = null, noiseGain = null;
-
-function initAudio() {
-  if (audioCtx) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-  // Oscillator for engine tone
-  engineOsc = audioCtx.createOscillator();
-  engineOsc.type = 'sawtooth';
-  engineOsc.frequency.value = 80;
-
-  // Gain for engine tone
-  engineGain = audioCtx.createGain();
-  engineGain.gain.value = 0;
-
-  // White noise for rumble
-  const bufferSize = audioCtx.sampleRate * 2;
-  const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-  const data = noiseBuffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-  noiseSource = audioCtx.createBufferSource();
-  noiseSource.buffer = noiseBuffer;
-  noiseSource.loop = true;
-
-  // Low-pass filter on noise to make it rumbly
-  const filter = audioCtx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.value = 300;
-
-  noiseGain = audioCtx.createGain();
-  noiseGain.gain.value = 0;
-
-  engineOsc.connect(engineGain).connect(audioCtx.destination);
-  noiseSource.connect(filter).connect(noiseGain).connect(audioCtx.destination);
-
-  engineOsc.start();
-  noiseSource.start();
-}
-
-function updateEngineSound() {
-  if (!audioCtx || state !== 'racing') return;
-  const t = audioCtx.currentTime;
-  const speedFrac = playerSpeed / 400;
-
-  // Pitch rises with speed
-  engineOsc.frequency.setTargetAtTime(80 + speedFrac * 220, t, 0.1);
-
-  if (keys.accel && playerSpeed > 5) {
-    engineGain.gain.setTargetAtTime(0.08, t, 0.05);
-    noiseGain.gain.setTargetAtTime(0.04 + speedFrac * 0.06, t, 0.05);
-  } else {
-    // Idle / decel - quieter and lower pitch
-    engineGain.gain.setTargetAtTime(playerSpeed > 5 ? 0.03 : 0, t, 0.15);
-    noiseGain.gain.setTargetAtTime(playerSpeed > 5 ? 0.015 : 0, t, 0.15);
-  }
-}
-
-// Controls
 function setupControls() {
-  // Keyboard
   window.addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft' || e.key === 'a') { keys.left = true; e.preventDefault(); }
     if (e.key === 'ArrowRight' || e.key === 'd') { keys.right = true; e.preventDefault(); }
@@ -364,16 +377,13 @@ function setupControls() {
     if (e.key === 'Control') keys.accel = false;
   });
 
-  // Touch buttons - use pointerdown/pointerup on document to avoid losing events when finger slides
   function addBtn(id, key) {
     const el = document.getElementById(id);
     let pointerId = null;
     el.addEventListener('pointerdown', e => {
       pointerId = e.pointerId;
       el.setPointerCapture(e.pointerId);
-      keys[key] = true;
-      el.classList.add('pressed');
-      e.preventDefault();
+      keys[key] = true; el.classList.add('pressed'); e.preventDefault();
     });
     el.addEventListener('pointerup', e => {
       if (e.pointerId === pointerId) { keys[key] = false; el.classList.remove('pressed'); pointerId = null; }
