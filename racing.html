@@ -48,6 +48,7 @@ let playerRacePos, lives, wallPenalty, crashFlash, lastLaneChange;
 let cars = [];
 
 const keys = { left: false, right: false, accel: false };
+const prevKeys = { left: false, right: false };
 let lastTime = 0;
 
 function initRace() {
@@ -103,17 +104,21 @@ function update(dt) {
   }
   if (wallSlowed) playerSpeed = Math.min(playerSpeed, speedCap);
 
-  // Lane change
+  // Lane change — wall penalty only fires on the initial press, not while held
   const now = performance.now();
+  const leftPressed  = keys.left  && !prevKeys.left;
+  const rightPressed = keys.right && !prevKeys.right;
   if (now - lastLaneChange > 280) {
     if (keys.left) {
       if (playerLane > 0) { playerLane--; lastLaneChange = now; }
-      else if (wallPenalty === 0) { wallPenalty = 5; playerSpeed *= 0.3; lastLaneChange = now; }
+      else if (leftPressed && wallPenalty === 0) { wallPenalty = 5; playerSpeed *= 0.3; }
     } else if (keys.right) {
       if (playerLane < 2) { playerLane++; lastLaneChange = now; }
-      else if (wallPenalty === 0) { wallPenalty = 5; playerSpeed *= 0.3; lastLaneChange = now; }
+      else if (rightPressed && wallPenalty === 0) { wallPenalty = 5; playerSpeed *= 0.3; }
     }
   }
+  prevKeys.left  = keys.left;
+  prevKeys.right = keys.right;
 
   const dist = playerSpeed * dt;
   playerPos += dist;
