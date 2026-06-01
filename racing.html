@@ -112,10 +112,9 @@ function update(dt) {
     else if (keys.right && playerLane < 2) { playerLane++; lastLaneChange = now; }
   }
 
-  // Wall collision: if player tries to go beyond lane 0 or lane 2 edges
-  // Actually enforce: if key held against wall, apply wall penalty
-  if ((keys.left && playerLane === 0) || (keys.right && playerLane === 2)) {
-    if (playerSpeed > 80 && wallPenalty === 0 && now - lastLaneChange < 50) {
+  // Wall hit: pressing left in lane 0 or right in lane 2
+  if (wallPenalty === 0) {
+    if ((keys.left && playerLane === 0) || (keys.right && playerLane === 2)) {
       wallPenalty = 5;
       playerSpeed *= 0.3;
     }
