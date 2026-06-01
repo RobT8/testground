@@ -162,105 +162,64 @@ function update(dt) {
   }
 }
 
-// Perspective projection
-const HORIZON_Y = 210;
-const CAM_H = 110;
-const VIEW_DIST = 700;
-const LANE_OFF = [-0.62, 0, 0.62]; // lane offsets in road-width fractions (-1..1)
-
-function project(dist, laneOff) {
-  const scale = CAM_H / (dist + 1);
-  const screenY = HORIZON_Y + CAM_H - scale * CAM_H;
-  const screenX = W / 2 + laneOff * scale * 260;
-  return { x: screenX, y: screenY, scale };
-}
+const LANE_X = [60, 180, 300];
+const PLAYER_Y = 420;
+const VIEW_RANGE = 620;
 
 function draw() {
-  // Sky gradient
-  const sky = ctx.createLinearGradient(0, 0, 0, HORIZON_Y);
-  sky.addColorStop(0, '#0d0d1a');
-  sky.addColorStop(1, '#333355');
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, W, HORIZON_Y);
+  ctx.fillStyle = '#2a2a2a';
+  ctx.fillRect(0, 0, W, H);
 
-  // Ground
-  ctx.fillStyle = '#1e1e1e';
-  ctx.fillRect(0, HORIZON_Y, W, H - HORIZON_Y);
-
-  // Road trapezoid
-  const nL = project(0, -1), nR = project(0, 1);
-  ctx.beginPath();
-  ctx.moveTo(nL.x, nL.y);
-  ctx.lineTo(nR.x, nR.y);
-  ctx.lineTo(W / 2 + 1, HORIZON_Y);
-  ctx.lineTo(W / 2 - 1, HORIZON_Y);
-  ctx.closePath();
+  // Road
   ctx.fillStyle = '#484848';
-  ctx.fill();
+  ctx.fillRect(20, 0, W - 40, H);
 
-  // Kerb segments
-  const SEG = 90;
-  for (let d = 0; d < VIEW_DIST; d += SEG) {
-    const even = Math.floor((playerPos + d) / SEG) % 2 === 0;
-    const col = even ? '#cc2222' : '#eeeeee';
-    const p0l = project(d, -1), p1l = project(d + SEG, -1);
-    const p0r = project(d,  1), p1r = project(d + SEG,  1);
-    const kw = 18;
-    ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.moveTo(p0l.x, p0l.y); ctx.lineTo(p0l.x - kw * p0l.scale, p0l.y);
-    ctx.lineTo(p1l.x - kw * p1l.scale, p1l.y); ctx.lineTo(p1l.x, p1l.y);
-    ctx.closePath(); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(p0r.x, p0r.y); ctx.lineTo(p0r.x + kw * p0r.scale, p0r.y);
-    ctx.lineTo(p1r.x + kw * p1r.scale, p1r.y); ctx.lineTo(p1r.x, p1r.y);
-    ctx.closePath(); ctx.fill();
+  // Kerb stripes
+  for (let y = -80; y < H; y += 40) {
+    const sy = ((y + stripeOffset * 0.5) % (H + 80) + H + 80) % (H + 80) - 80;
+    ctx.fillStyle = (Math.floor((sy + stripeOffset * 0.5) / 20) % 2 === 0) ? '#cc2222' : '#eeeeee';
+    ctx.fillRect(20, sy, 8, 20);
+    ctx.fillRect(W - 28, sy, 8, 20);
   }
 
-  // Lane dividers
-  const DASH = 70, TOTAL = 140;
-  for (const loff of [-0.31, 0.31]) {
-    for (let d = 0; d < VIEW_DIST; d += TOTAL) {
-      const offset = playerPos % TOTAL;
-      const d0 = d - offset;
-      const p0 = project(Math.max(0, d0), loff);
-      const p1 = project(Math.min(VIEW_DIST, d0 + DASH), loff);
-      if (p1.y <= HORIZON_Y || p0.y <= HORIZON_Y) continue;
-      ctx.strokeStyle = '#fff5';
-      ctx.lineWidth = Math.max(1, p0.scale * 4);
-      ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
-    }
+  // Lane dividers (dashed)
+  ctx.strokeStyle = '#fff8';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([40, 40]);
+  ctx.lineDashOffset = -stripeOffset;
+  for (const x of [120, 240]) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
   }
+  ctx.setLineDash([]);
 
-  // Other cars — draw far to near
+  // Other cars
   const visible = cars
-    .map(c => ({ car: c, dist: c.trackPos - playerPos }))
-    .filter(({ dist }) => dist > 5 && dist < VIEW_DIST)
-    .sort((a, b) => b.dist - a.dist);
+    .map(c => ({ car: c, rel: c.trackPos - playerPos }))
+    .filter(({ rel }) => rel > -60 && rel < VIEW_RANGE)
+    .sort((a, b) => b.rel - a.rel);
 
-  for (const { car, dist } of visible) {
-    const p = project(dist, LANE_OFF[car.lane]);
-    if (p.y < HORIZON_Y) continue;
-    drawCarP(p.x, p.y, p.scale, car.color, false);
+  for (const { car, rel } of visible) {
+    const y = PLAYER_Y - (rel / VIEW_RANGE) * (PLAYER_Y - 60);
+    const scale = 0.35 + 0.65 * (1 - rel / VIEW_RANGE);
+    drawCar(LANE_X[car.lane], y, scale, car.color, false);
   }
 
   // Wall penalty overlay
   if (wallPenalty > 0) {
-    ctx.fillStyle = `rgba(255,140,0,${Math.min(0.4, wallPenalty * 0.09)})`;
+    ctx.fillStyle = `rgba(255,140,0,${Math.min(0.35, wallPenalty * 0.08)})`;
     ctx.fillRect(0, 0, W, H);
   }
 
-  // Player car — behind view, fixed at bottom
+  // Player car
   const playerColor = crashFlash > 0 && Math.floor(crashFlash * 8) % 2 === 0 ? '#ff2222' : '#00cfff';
-  const px = W / 2 + LANE_OFF[playerLane] * 115;
-  drawCarP(px, H - 55, 2.2, playerColor, true);
+  drawCar(LANE_X[playerLane], PLAYER_Y, 1.0, playerColor, true);
 
-  // Top fade over horizon
-  const grad = ctx.createLinearGradient(0, HORIZON_Y - 20, 0, HORIZON_Y + 10);
-  grad.addColorStop(0, 'transparent');
+  // Top fade
+  const grad = ctx.createLinearGradient(0, 0, 0, 70);
+  grad.addColorStop(0, '#2a2a2a');
   grad.addColorStop(1, 'transparent');
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, HORIZON_Y + 10);
+  ctx.fillRect(0, 0, W, 70);
 
   // HUD
   drawHUD();
@@ -305,39 +264,30 @@ function drawHUD() {
   ctx.textBaseline = 'alphabetic';
 }
 
-// Draw car from behind/above perspective
-function drawCarP(cx, cy, scale, color, isPlayer) {
-  const cw = 44 * scale, ch = 28 * scale; // wider than tall - rear view
-  const x = cx - cw / 2, y = cy - ch;
+function drawCar(cx, cy, scale, color, isPlayer) {
+  const cw = 36 * scale, ch = 60 * scale;
+  const x = cx - cw / 2, y = cy - ch / 2;
 
-  // Car body
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.roundRect(x, y, cw, ch, 5 * scale);
+  ctx.roundRect(x, y, cw, ch, 6 * scale);
   ctx.fill();
 
-  // Roof (darker centre panel)
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.beginPath();
-  ctx.roundRect(x + cw * 0.2, y + ch * 0.1, cw * 0.6, ch * 0.55, 3 * scale);
-  ctx.fill();
+  ctx.fillStyle = isPlayer ? '#001a33' : '#33444488';
+  ctx.fillRect(x + cw * 0.15, y + ch * 0.15, cw * 0.7, ch * 0.25);
 
-  // Rear windscreen
-  ctx.fillStyle = isPlayer ? '#003355cc' : '#22334488';
-  ctx.beginPath();
-  ctx.roundRect(x + cw * 0.22, y + ch * 0.12, cw * 0.56, ch * 0.45, 2 * scale);
-  ctx.fill();
-
-  // Wheels (four corners, visible from behind)
   ctx.fillStyle = '#111';
-  const ww = 8 * scale, wh = 10 * scale;
-  ctx.beginPath(); ctx.roundRect(x - ww * 0.5, y + ch * 0.3, ww, wh, 2); ctx.fill();
-  ctx.beginPath(); ctx.roundRect(x + cw - ww * 0.5, y + ch * 0.3, ww, wh, 2); ctx.fill();
+  const ww = 7 * scale, wh = 12 * scale;
+  ctx.fillRect(x - ww * 0.6, y + ch * 0.1, ww, wh);
+  ctx.fillRect(x + cw - ww * 0.4, y + ch * 0.1, ww, wh);
+  ctx.fillRect(x - ww * 0.6, y + ch * 0.65, ww, wh);
+  ctx.fillRect(x + cw - ww * 0.4, y + ch * 0.65, ww, wh);
 
-  // Rear lights
-  ctx.fillStyle = isPlayer ? '#ff4400' : '#cc2200';
-  ctx.fillRect(x + cw * 0.05, y + ch * 0.72, cw * 0.2, ch * 0.2);
-  ctx.fillRect(x + cw * 0.75, y + ch * 0.72, cw * 0.2, ch * 0.2);
+  if (isPlayer) {
+    ctx.fillStyle = '#ffffaa';
+    ctx.fillRect(x + cw * 0.1, y + ch * 0.85, cw * 0.25, ch * 0.08);
+    ctx.fillRect(x + cw * 0.65, y + ch * 0.85, cw * 0.25, ch * 0.08);
+  }
 }
 
 function showEndScreen() {
