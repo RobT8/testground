@@ -8,7 +8,7 @@
         "--supabase-url",
         "https://guvtarcmvhqgjlaqryka.supabase.co",
         "--supabase-key",
-        "YOUR_SERVICE_ROLE_KEY_HERE"
+        "${SUPABASE_SERVICE_ROLE_KEY}"
       ]
     }
   }
