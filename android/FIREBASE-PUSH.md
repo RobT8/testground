@@ -35,22 +35,25 @@ time. You do steps 1–3; I do step 4.
 5. You can skip the rest of Firebase's "add the SDK" wizard — that's already done
    in the code.
 
-## Step 3 — Get the server key and give it to me (~3 min)
+## Step 3 — Server key ✅ DONE
 
-The server needs a private key to send pushes.
+You generated the service-account key and it's now stored **securely server-side**
+(in an `app_secrets` row readable only by Supabase's service role — never by any
+client, and not in this repo). The key was validated end-to-end: the function
+successfully authenticated with Firebase.
 
-1. In Firebase: **⚙ Project settings → Service accounts**.
-2. Click **Generate new private key** → confirm → a **JSON file downloads**.
-3. **⚠ This file is a SECRET — do NOT commit it to the repo.** (The repo is set
-   to ignore it, but just paste its contents to me in chat, or set it yourself:
-   Supabase → your project → **Edge Functions → Secrets** → add
-   `FCM_SERVICE_ACCOUNT` = the whole JSON.)
+## Step 4 — Sender deployed ✅ DONE
 
-## Step 4 — I deploy the sender (my part)
+The **`push-alarm`** Edge Function is deployed and live. Raising an alert now
+calls it automatically, and it sends an instant high-priority push to the
+sleeper's phone.
 
-Once the secret is set, I deploy the **`push-alarm`** Edge Function (its code is
-already in `supabase/functions/push-alarm/`). After that, raising an alert sends
-an instant high-priority push to the sleeper's phone.
+## ➡️ What's left for you
+
+Just **Step 2 above** — commit **`android/app/google-services.json`** (easiest on
+a computer). That's what lets Mum's phone register its push token. After it's in:
+rebuild/reinstall the APK, open the app on Mum's phone, and tap **Arm for
+tonight** (that enrols the token). Then push is fully working.
 
 ---
 

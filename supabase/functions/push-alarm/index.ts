@@ -6,8 +6,8 @@
 //  data message, which wakes the phone even in deep Doze (unplugged, locked,
 //  asleep) — the one thing polling can't guarantee off-charger.
 //
-//  Requires one secret to be set on the project:
-//    FCM_SERVICE_ACCOUNT = the full JSON of a Firebase service-account key.
+//  The Firebase service-account JSON is read from the app_secrets table
+//  (row name 'fcm_service_account'), which only the service role can read.
 //  (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.)
 // ============================================================================
 
@@ -87,8 +87,17 @@ Deno.serve(async (req) => {
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const saRaw = Deno.env.get("FCM_SERVICE_ACCOUNT");
-    if (!saRaw) return json({ error: "FCM_SERVICE_ACCOUNT secret not set" }, 500);
+
+    // The Firebase service-account JSON is kept in the app_secrets table, which
+    // is readable only with the service-role key (bypasses RLS) — never by any
+    // client/publishable key. It is not stored in the repo.
+    const secRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/app_secrets?name=eq.fcm_service_account&select=value`,
+      { headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}` } },
+    );
+    const secRows = await secRes.json();
+    const saRaw = Array.isArray(secRows) && secRows[0] ? secRows[0].value : null;
+    if (!saRaw) return json({ error: "FCM service account not configured" }, 500);
     const sa = JSON.parse(saRaw);
 
     // Which phones are the sleepers in this group?
