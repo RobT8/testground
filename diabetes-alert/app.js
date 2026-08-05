@@ -330,6 +330,8 @@
   // ==========================================================================
   let armed = false;
   let currentAlarmId = null;
+  let confirmedId = null;     // alert we just confirmed locally (don't re-ring it)
+  let sleeperTimer = null;    // periodic self-heal while armed (auto-repeat)
 
   function initSleeper() {
     $("sleep-who").textContent   = me.name;
@@ -342,10 +344,14 @@
       $("arm-panel").hidden = true;
       $("armed-panel").hidden = false;
       await refreshSleeper();
+      // Auto-repeat: re-check every few seconds so a stopped alarm restarts
+      // until she actually confirms.
+      if (!sleeperTimer) sleeperTimer = setInterval(refreshSleeper, 3000);
     });
 
     $("btn-disarm").addEventListener("click", () => {
       armed = false;
+      if (sleeperTimer) { clearInterval(sleeperTimer); sleeperTimer = null; }
       Wake.release();
       Alarm.stop();
       $("armed-panel").hidden = true;
@@ -384,18 +390,22 @@
     renderLog($("sleep-log"), await getRecent());
     const active = await getActiveAlert();
 
-    if (active && armed) {
-      // New alert -> ring.
+    if (active && armed && active.id !== confirmedId) {
       if (currentAlarmId !== active.id) {
+        // New alert -> ring.
         currentAlarmId = active.id;
         const who = [active.created_by, ...(active.also_requested_by || [])];
         $("alarm-from").textContent = who.join(" & ") + " asked you to check.";
         $("alarm-overlay").hidden = false;
         $("thanks-overlay").hidden = true;
         Alarm.start();
+      } else if (!Alarm.isPlaying()) {
+        // Auto-repeat: alarm stopped but she hasn't confirmed -> ring again.
+        $("alarm-overlay").hidden = false;
+        Alarm.start();
       }
     } else {
-      // No active alert -> make sure we're silent.
+      // No active alert (or just confirmed) -> make sure we're silent.
       currentAlarmId = null;
       Alarm.stop();
       $("alarm-overlay").hidden = true;
@@ -405,6 +415,7 @@
   async function doConfirm(note) {
     Alarm.stop();
     const id = currentAlarmId;
+    if (id) confirmedId = id;   // guard: don't let the self-heal re-ring this one
     $("alarm-overlay").hidden = true;
     $("thanks-overlay").hidden = false;
     if (id) { try { await confirmAlert(id, note); } catch (e) { console.warn(e); } }

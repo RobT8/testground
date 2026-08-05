@@ -79,6 +79,11 @@ Send `app-debug.apk` to each phone (email, Google Drive, USB…). On each phone:
 **Mum:**
 - The screen lights up and rings. She taps **"I've checked — I'm OK"** (or a
   quick note). The alarm stops, and all carers see **✅ checked in**.
+- **It keeps going until she confirms.** The alarm auto-repeats: if it's dozed
+  off, dismissed, or the volume is turned down, it restarts itself and re-maxes
+  the volume within seconds. The only things that stop it are her tapping a
+  confirm button, or **any carer pressing "Cancel this alert (false alarm)"** —
+  so if it's a false alarm and she can't be roused, a carer can silence it.
 
 ---
 

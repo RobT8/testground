@@ -52,6 +52,10 @@ class AlarmActivity : AppCompatActivity() {
     }
 
     private fun confirm(note: String?) {
+        // Guard first: tell the watcher this alert is done, so it won't re-ring
+        // in the moment before the confirmation reaches the server.
+        alertId?.let { prefs.confirmedAlertId = it }
+
         // Stop the noise immediately for a good experience.
         AlarmPlayer.stop(this)
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)

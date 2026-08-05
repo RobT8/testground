@@ -24,6 +24,12 @@ class Prefs(context: Context) {
         get() = sp.getString("last_rung", "") ?: ""
         set(v) = sp.edit().putString("last_rung", v).apply()
 
+    /** The alert id the sleeper just confirmed locally. Prevents the watcher
+     *  from re-ringing in the split second before the confirm reaches the server. */
+    var confirmedAlertId: String
+        get() = sp.getString("confirmed_id", "") ?: ""
+        set(v) = sp.edit().putString("confirmed_id", v).apply()
+
     /** Whether the sleeper has armed the watcher for the night. */
     var armed: Boolean
         get() = sp.getBoolean("armed", false)

@@ -23,6 +23,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 class AlarmService : Service() {
 
     @Volatile private var running = false
+    @Volatile private var ringingForAlert = false
     private var worker: Thread? = null
     private lateinit var prefs: Prefs
 
@@ -62,27 +63,34 @@ class AlarmService : Service() {
         if (group.isBlank()) return
         try {
             val active = Supa.getActiveAlert(group)
-            if (active != null && active.status == "active") {
-                if (prefs.lastRungAlertId != active.id) {
-                    prefs.lastRungAlertId = active.id
-                    triggerAlarm(active)
-                }
+            if (active != null && active.status == "active" && active.id != prefs.confirmedAlertId) {
+                // An unconfirmed alert exists -> keep the alarm going, relentlessly.
+                // ensureAlarming restarts the sound if it stopped and re-maxes the
+                // volume, so it auto-repeats until she actually confirms.
+                val isNew = prefs.lastRungAlertId != active.id
+                if (isNew) prefs.lastRungAlertId = active.id
+                ringingForAlert = true
+                val restarted = AlarmPlayer.ensureAlarming(this)
+                // Re-surface the full-screen screen on the first ring and any time
+                // the sound had to be restarted (e.g. it was dismissed).
+                if (isNew || restarted) showAlarmNotification(active)
             } else {
-                // No active alert -> someone confirmed or cancelled. Make sure we're quiet.
-                if (AlarmPlayer.isPlaying) {
+                // Confirmed / cancelled / just-confirmed-locally -> go quiet.
+                if (ringingForAlert && AlarmPlayer.isPlaying) {
                     AlarmPlayer.stop(this)
                     LocalBroadcastManager.getInstance(this)
                         .sendBroadcast(Intent(ACTION_ALARM_STOPPED))
                 }
+                ringingForAlert = false
+                (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                    .cancel(ALARM_NOTIF_ID)
             }
         } catch (_: Exception) {
             // Network hiccup — ignore and try again next tick.
         }
     }
 
-    private fun triggerAlarm(alert: Alert) {
-        AlarmPlayer.start(this)
-
+    private fun showAlarmNotification(alert: Alert) {
         val full = Intent(this, AlarmActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             putExtra(EXTRA_ALERT_ID, alert.id)
