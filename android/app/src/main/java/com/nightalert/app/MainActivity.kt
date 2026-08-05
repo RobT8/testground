@@ -179,6 +179,7 @@ class MainActivity : AppCompatActivity() {
         prefs.armed = true
         AlarmService.start(this)
         Heartbeat.schedule(this)
+        Fcm.registerToken(this)   // enrol for instant push (no-op until Firebase is set up)
         updateArmedUi()
         Toast.makeText(this, "Armed — you'll be woken if you're needed.", Toast.LENGTH_LONG).show()
     }

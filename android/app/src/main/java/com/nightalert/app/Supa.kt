@@ -118,8 +118,38 @@ object Supa {
         client.newCall(req).execute().use { r ->
             val b = r.body?.string().orEmpty()
             if (!r.isSuccessful) throw RuntimeException("POST ${r.code}: $b")
-            return parse(b).first()
+            val created = parse(b).first()
+            // A brand-new alert -> fire the instant push (no-op until deployed).
+            Thread { pushAlarm(group) }.start()
+            return created
         }
+    }
+
+    /** Store/refresh a phone's push token (upsert on the token primary key). */
+    fun upsertDevice(group: String, token: String, role: String) {
+        val body = JSONObject()
+            .put("token", token).put("group_id", group).put("role", role).toString()
+        val req = Request.Builder()
+            .url(Config.SUPABASE_URL.trimEnd('/') + "/rest/v1/night_alert_devices")
+            .auth().header("Content-Type", "application/json")
+            .header("Prefer", "resolution=merge-duplicates,return=minimal")
+            .post(body.toRequestBody(JSON)).build()
+        client.newCall(req).execute().use { r ->
+            if (!r.isSuccessful) throw RuntimeException("device ${r.code}: ${r.body?.string()}")
+        }
+    }
+
+    /** Ask the server to send the instant wake-up push. Best-effort: silently
+     *  does nothing until the push-alarm function is deployed. */
+    fun pushAlarm(group: String) {
+        try {
+            val body = JSONObject().put("group_id", group).toString()
+            val req = Request.Builder()
+                .url(Config.SUPABASE_URL.trimEnd('/') + "/functions/v1/push-alarm")
+                .auth().header("Content-Type", "application/json")
+                .post(body.toRequestBody(JSON)).build()
+            client.newCall(req).execute().use { }
+        } catch (_: Exception) {}
     }
 
     fun cancelAlert(id: String) = patch(id, JSONObject().put("status", "cancelled"))

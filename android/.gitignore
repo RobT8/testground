@@ -7,3 +7,8 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
+
+# NEVER commit the Firebase service-account key — it is a SERVER SECRET.
+# (google-services.json IS safe to commit; the admin-sdk key is NOT.)
+**/service-account*.json
+**/*-firebase-adminsdk-*.json

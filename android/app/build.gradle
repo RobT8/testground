@@ -44,4 +44,15 @@ dependencies {
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    // Firebase Cloud Messaging (for guaranteed instant wake even in deep Doze).
+    // Harmless until google-services.json is added — Firebase just won't init.
+    implementation platform('com.google.firebase:firebase-bom:33.1.2')
+    implementation 'com.google.firebase:firebase-messaging'
+}
+
+// Only wire up Firebase once you've added the config file from the Firebase
+// console. Until then the build works exactly as before, without push.
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
 }

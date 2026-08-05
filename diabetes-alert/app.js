@@ -201,7 +201,24 @@
       .insert({ group_id: me.group, created_by: me.name, status: "active" })
       .select().single();
     if (error) throw error;
+    pushAlarm(me.group);   // fire the instant push (no-op until deployed)
     return data;
+  }
+
+  // Ask the server to send the instant wake-up push. Best-effort.
+  function pushAlarm(group) {
+    try {
+      fetch(CFG.SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/push-alarm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": CFG.SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + CFG.SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ group_id: group }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch (e) { /* ignore */ }
   }
 
   async function cancelAlert(id) {
