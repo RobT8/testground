@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/alarm_bg">
+
+    <!-- Main alarm panel -->
+    <ScrollView
+        android:id="@+id/mainPanel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="24dp">
+
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="🩸" android:textSize="64sp"/>
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:gravity="center"
+                android:text="Time to check your\nblood sugar"
+                android:textColor="@android:color/white" android:textSize="30sp" android:textStyle="bold"/>
+            <TextView
+                android:id="@+id/from"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:gravity="center"
+                android:textColor="#FFE4E4" android:textSize="16sp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/confirm"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:paddingVertical="22dp"
+                android:text="✓  I've checked — I'm OK"
+                android:textSize="22sp" android:textStyle="bold"
+                android:textColor="@color/ok"
+                app:backgroundTint="@android:color/white"
+                app:cornerRadius="20dp"/>
+
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:text="…or tell them what you did:"
+                android:textColor="#FFDADA" android:textSize="15sp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/noteLevels" style="@style/NoteButton"
+                android:text="🩸  Checked my levels"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/noteMeds" style="@style/NoteButton"
+                android:text="💊  Took my medication"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/noteFood" style="@style/NoteButton"
+                android:text="🍞  Had food / juice"/>
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Thank-you panel -->
+    <LinearLayout
+        android:id="@+id/thanksPanel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="24dp"
+        android:visibility="gone">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="💙" android:textSize="72sp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Thank you" android:textColor="@android:color/white"
+            android:textSize="28sp" android:textStyle="bold" android:layout_marginTop="8dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:gravity="center" android:layout_marginTop="6dp"
+            android:text="They've been told you're OK.\nGo back to sleep."
+            android:textColor="#FFDADA" android:textSize="17sp"/>
+    </LinearLayout>
+</FrameLayout>

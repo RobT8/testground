@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Night Alert</string>
+    <string name="not_configured">Not set up yet.\n\nOpen Config.kt and paste in your Supabase URL and key, then rebuild.\n\nSee the README for step-by-step help.</string>
+</resources>
