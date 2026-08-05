@@ -1,0 +1,66 @@
+name: Backend smoke test
+
+# Exercises the LIVE Supabase REST path exactly as the phone app does, from an
+# environment with real internet. Proves the publishable key + table + CRUD flow
+# all work end-to-end. Runs when this file changes, or manually.
+
+on:
+  push:
+    paths:
+      - '.github/workflows/backend-smoke.yml'
+  workflow_dispatch: {}
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      URL: https://zpesevmnmaifnooqiyrr.supabase.co/rest/v1/night_alerts
+      KEY: sb_publishable_5WdjrD77OFZANghegb_4-w_fR4d582z
+      GROUP: CI-SMOKE-${{ github.run_id }}
+    steps:
+      - name: Replay the phone app's REST calls against live Supabase
+        run: |
+          set -euo pipefail
+          AK="apikey: $KEY"; AU="Authorization: Bearer $KEY"; JS="Content-Type: application/json"
+
+          echo "== 1. INSERT — a carer presses 'Wake Mum up' =="
+          R=$(curl -s -w '\n%{http_code}' -X POST "$URL" -H "$AK" -H "$AU" -H "$JS" \
+                -H "Prefer: return=representation" \
+                -d "{\"group_id\":\"$GROUP\",\"created_by\":\"CI-Rob\",\"status\":\"active\"}")
+          B=$(echo "$R" | head -n -1); C=$(echo "$R" | tail -n1)
+          echo "HTTP $C"; echo "$B"
+          [ "$C" = "201" ] || { echo "::error::INSERT expected 201"; exit 1; }
+          ID=$(echo "$B" | jq -r '.[0].id'); echo "alert id = $ID"
+
+          echo "== 2. GET active — Mum's phone polls and would ring =="
+          R=$(curl -s -w '\n%{http_code}' "$URL?group_id=eq.$GROUP&status=eq.active&order=created_at.desc&limit=1" -H "$AK" -H "$AU")
+          B=$(echo "$R" | head -n -1); C=$(echo "$R" | tail -n1)
+          echo "HTTP $C"; echo "$B"
+          [ "$C" = "200" ] || { echo "::error::GET active expected 200"; exit 1; }
+          [ "$(echo "$B" | jq -r '.[0].id')" = "$ID" ] || { echo "::error::active id mismatch"; exit 1; }
+
+          echo "== 3. PATCH — a second carer joins (no 2nd alarm) =="
+          R=$(curl -s -w '\n%{http_code}' -X PATCH "$URL?id=eq.$ID" -H "$AK" -H "$AU" -H "$JS" \
+                -H "Prefer: return=representation" -d '{"also_requested_by":["CI-Sister"]}')
+          B=$(echo "$R" | head -n -1); C=$(echo "$R" | tail -n1)
+          echo "HTTP $C"; echo "$B"
+          [ "$C" = "200" ] || { echo "::error::PATCH append expected 200"; exit 1; }
+          [ "$(echo "$B" | jq -r '.[0].also_requested_by[0]')" = "CI-Sister" ] || { echo "::error::append failed"; exit 1; }
+
+          echo "== 4. PATCH — Mum taps 'I've checked' =="
+          R=$(curl -s -w '\n%{http_code}' -X PATCH "$URL?id=eq.$ID" -H "$AK" -H "$AU" -H "$JS" \
+                -H "Prefer: return=representation" \
+                -d '{"status":"confirmed","confirmed_by":"Mum","confirmed_note":"Took my medication"}')
+          B=$(echo "$R" | head -n -1); C=$(echo "$R" | tail -n1)
+          echo "HTTP $C"; echo "$B"
+          [ "$C" = "200" ] || { echo "::error::confirm expected 200"; exit 1; }
+          [ "$(echo "$B" | jq -r '.[0].status')" = "confirmed" ] || { echo "::error::status not confirmed"; exit 1; }
+
+          echo "== 5. GET recent — every carer sees the check-in =="
+          R=$(curl -s -w '\n%{http_code}' "$URL?group_id=eq.$GROUP&order=created_at.desc&limit=8" -H "$AK" -H "$AU")
+          B=$(echo "$R" | head -n -1); C=$(echo "$R" | tail -n1)
+          echo "HTTP $C"; echo "$B"
+          [ "$C" = "200" ] || { echo "::error::GET recent expected 200"; exit 1; }
+
+          echo ""
+          echo "✅ ALL BACKEND OPERATIONS PASSED — the phone app's REST path works."
