@@ -20,8 +20,10 @@ package com.nightalert.app
  * ============================================================================
  */
 object Config {
-    const val SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE"
-    const val SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE"
+    // Backend is already set up (project: boatyardjobs, table: night_alerts).
+    // SUPABASE_ANON_KEY holds a modern Supabase "publishable" key — safe to ship.
+    const val SUPABASE_URL = "https://zpesevmnmaifnooqiyrr.supabase.co"
+    const val SUPABASE_ANON_KEY = "sb_publishable_5WdjrD77OFZANghegb_4-w_fR4d582z"
 
     /** Cosmetic only — what the carers call the person being woken. */
     const val SLEEPER_NAME = "Mum"

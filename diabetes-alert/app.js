@@ -164,7 +164,7 @@
 
   async function getActiveAlert() {
     const { data, error } = await sb
-      .from("alerts")
+      .from("night_alerts")
       .select("*")
       .eq("group_id", me.group)
       .eq("status", "active")
@@ -176,7 +176,7 @@
 
   async function getRecent() {
     const { data, error } = await sb
-      .from("alerts")
+      .from("night_alerts")
       .select("*")
       .eq("group_id", me.group)
       .order("created_at", { ascending: false })
@@ -191,13 +191,13 @@
     if (active) {
       const names = new Set(active.also_requested_by || []);
       if (active.created_by !== me.name) names.add(me.name);
-      const { error } = await sb.from("alerts")
+      const { error } = await sb.from("night_alerts")
         .update({ also_requested_by: Array.from(names) })
         .eq("id", active.id);
       if (error) throw error;
       return active;
     }
-    const { data, error } = await sb.from("alerts")
+    const { data, error } = await sb.from("night_alerts")
       .insert({ group_id: me.group, created_by: me.name, status: "active" })
       .select().single();
     if (error) throw error;
@@ -205,11 +205,11 @@
   }
 
   async function cancelAlert(id) {
-    await sb.from("alerts").update({ status: "cancelled" }).eq("id", id);
+    await sb.from("night_alerts").update({ status: "cancelled" }).eq("id", id);
   }
 
   async function confirmAlert(id, note) {
-    await sb.from("alerts").update({
+    await sb.from("night_alerts").update({
       status: "confirmed",
       confirmed_at: new Date().toISOString(),
       confirmed_by: SLEEPER_NAME,
@@ -225,7 +225,7 @@
     if (channel) sb.removeChannel(channel);
     channel = sb.channel("alerts-" + me.group)
       .on("postgres_changes",
-        { event: "*", schema: "public", table: "alerts", filter: "group_id=eq." + me.group },
+        { event: "*", schema: "public", table: "night_alerts", filter: "group_id=eq." + me.group },
         (payload) => onChange(payload))
       .subscribe();
   }

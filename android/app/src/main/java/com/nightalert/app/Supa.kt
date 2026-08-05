@@ -37,7 +37,7 @@ object Supa {
         .callTimeout(20, TimeUnit.SECONDS)
         .build()
 
-    private fun base() = Config.SUPABASE_URL.trimEnd('/') + "/rest/v1/alerts"
+    private fun base() = Config.SUPABASE_URL.trimEnd('/') + "/rest/v1/night_alerts"
 
     private fun Request.Builder.auth(): Request.Builder = this
         .header("apikey", Config.SUPABASE_ANON_KEY)

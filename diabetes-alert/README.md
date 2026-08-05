@@ -18,9 +18,18 @@ It works on **any phone with a browser** (Android + iPhone) — no app store.
 
 ---
 
-## ⭐ The 15-minute setup
+## ✅ The backend is already set up
 
-You only do steps 1–3 once. Then everyone just opens a link.
+The Supabase database and keys are **already configured** in `config.js`, so you
+can **skip steps 1 and 2 below** — they're kept only for reference / if you ever
+move to your own project. Your only remaining job is **step 3 (host it)** and
+**step 4 (everyone opens the link)**.
+
+---
+
+## ⭐ Setup
+
+Steps 1–2 are already done for you. Do steps 3–4.
 
 ### 1. Create a free Supabase backend
 

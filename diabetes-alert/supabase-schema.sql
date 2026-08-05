@@ -1,59 +1,48 @@
 -- ============================================================================
 --  Diabetes Night Alert — database setup
---  Run this ONCE in Supabase:  Dashboard -> SQL Editor -> New query -> paste -> Run
+--
+--  ✅ ALREADY DONE: this has been applied to the Supabase project the app is
+--     wired to (project "boatyardjobs", table "night_alerts"). You do NOT need
+--     to run it again for the current setup.
+--
+--  Keep this file for the "move to its own project later" case: create a fresh
+--  Supabase project, run this once (SQL Editor -> paste -> Run), then update the
+--  URL + key in config.js (web) and Config.kt (Android).
+--
+--  Note: the table is named `night_alerts` (not `alerts`) so it can live safely
+--  alongside other tables in a shared project.
 -- ============================================================================
 
--- One row per alert. There is at most one "active" alert per group at a time.
-create table if not exists public.alerts (
+create table if not exists public.night_alerts (
   id                uuid primary key default gen_random_uuid(),
   group_id          text        not null,
   status            text        not null default 'active',  -- 'active' | 'confirmed' | 'cancelled'
   created_at        timestamptz not null default now(),
-  created_by        text        not null,                   -- caregiver who first raised it
-  also_requested_by text[]      not null default '{}',       -- other caregivers who pressed while active
+  created_by        text        not null,
+  also_requested_by text[]      not null default '{}',
   confirmed_at      timestamptz,
-  confirmed_by      text,                                    -- usually the sleeper
-  confirmed_note    text                                     -- 'Checked levels' / 'Took medication' / etc.
+  confirmed_by      text,
+  confirmed_note    text
 );
 
--- Fast lookup of the current active alert for a group.
-create index if not exists alerts_group_status_idx
-  on public.alerts (group_id, status, created_at desc);
+create index if not exists night_alerts_group_status_idx
+  on public.night_alerts (group_id, status, created_at desc);
 
--- ----------------------------------------------------------------------------
---  Realtime: let clients receive INSERT/UPDATE events live.
--- ----------------------------------------------------------------------------
-alter table public.alerts replica identity full;
+-- Realtime: let clients receive INSERT/UPDATE events live.
+alter table public.night_alerts replica identity full;
 do $$
 begin
   begin
-    alter publication supabase_realtime add table public.alerts;
-  exception when duplicate_object then
-    null; -- already added, ignore
+    alter publication supabase_realtime add table public.night_alerts;
+  exception when duplicate_object then null;
   end;
 end $$;
 
--- ----------------------------------------------------------------------------
---  Security (RLS).
---  This is a small private family app. Access is gated by the GROUP CODE, which
---  acts as a shared secret: you can only see/affect rows whose group_id you know.
---  The anon key alone is not enough to find another family's alerts.
---  (If you later want stronger auth, swap these for authenticated policies.)
--- ----------------------------------------------------------------------------
-alter table public.alerts enable row level security;
-
-drop policy if exists "family read"   on public.alerts;
-drop policy if exists "family insert" on public.alerts;
-drop policy if exists "family update" on public.alerts;
-
-create policy "family read"   on public.alerts for select using (true);
-create policy "family insert" on public.alerts for insert with check (true);
-create policy "family update" on public.alerts for update using (true) with check (true);
-
--- ----------------------------------------------------------------------------
---  Optional tidy-up: auto-delete alerts older than 14 days so the table stays small.
---  Requires the pg_cron extension (enable under Database -> Extensions).
---  Uncomment to use:
--- ----------------------------------------------------------------------------
--- select cron.schedule('purge-old-alerts', '0 4 * * *',
---   $$ delete from public.alerts where created_at < now() - interval '14 days' $$);
+-- Security (RLS): access is gated by the family GROUP CODE (shared secret).
+alter table public.night_alerts enable row level security;
+drop policy if exists "family read"   on public.night_alerts;
+drop policy if exists "family insert" on public.night_alerts;
+drop policy if exists "family update" on public.night_alerts;
+create policy "family read"   on public.night_alerts for select using (true);
+create policy "family insert" on public.night_alerts for insert with check (true);
+create policy "family update" on public.night_alerts for update using (true) with check (true);

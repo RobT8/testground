@@ -30,24 +30,13 @@ the web app or this app — everyone sees the same alerts.
 
 ## 🛠 How to build the app (no Android Studio needed)
 
-The app is built for you automatically in the cloud by **GitHub Actions**. You
-just need to set two config values and download the finished APK.
+The app is built for you automatically in the cloud by **GitHub Actions**.
 
-### 1. Set your Supabase keys
+### 1. Supabase keys — already done ✅
 
-These are the **same** values as the web app. If you already set up Supabase for
-the web version, reuse them — everything shares one backend.
-
-Open **`android/app/src/main/java/com/nightalert/app/Config.kt`** and fill in:
-
-```kotlin
-const val SUPABASE_URL = "https://abcdxyz.supabase.co"
-const val SUPABASE_ANON_KEY = "eyJhbGciOi..."
-const val SLEEPER_NAME = "Mum"
-```
-
-(If you haven't set up Supabase yet: follow steps 1–2 of the **web app README**
-in the `diabetes-alert/` folder — create the project and run `supabase-schema.sql`.)
+`Config.kt` already contains the working Supabase URL + key (shared with the web
+app). **You don't need to change anything** to get a working build. Only revisit
+this if you later move to your own Supabase project.
 
 ### 2. Let GitHub build the APK
 
