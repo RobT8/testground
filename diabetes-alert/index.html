@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>Diabetes Night Alert</title>
+  <meta name="theme-color" content="#1e1b4b" />
+
+  <!-- PWA / iPhone home-screen support -->
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Night Alert" />
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+
+<!-- ========================================================================
+     SCREEN 1 — SETUP  (choose name, group code, and role)
+========================================================================= -->
+<section id="screen-setup" class="screen">
+  <div class="card">
+    <h1 class="logo">🔔 Night Alert</h1>
+    <p class="sub">Wake-up alerts &amp; check-in confirmations for diabetes care.</p>
+
+    <label class="field">
+      <span>Your name</span>
+      <input id="input-name" type="text" autocomplete="name" placeholder="e.g. Rob" />
+    </label>
+
+    <label class="field">
+      <span>Family group code</span>
+      <input id="input-group" type="text" autocomplete="off" autocapitalize="characters"
+             placeholder="e.g. SMITH-NIGHT" />
+      <small>Everyone in the family types the <b>same</b> code. It keeps your alerts private — pick something only you know.</small>
+    </label>
+
+    <p class="role-label">This phone is…</p>
+    <div class="role-grid">
+      <button class="role-btn" data-role="caregiver">
+        <span class="role-emoji">📲</span>
+        <span class="role-title">A carer's phone</span>
+        <span class="role-desc">I send the alerts &amp; watch for the reply</span>
+      </button>
+      <button class="role-btn" data-role="sleeper">
+        <span class="role-emoji">🛏️</span>
+        <span class="role-title" data-sleeper-name>Mum's phone</span>
+        <span class="role-desc">This phone rings &amp; shows the check-in button</span>
+      </button>
+    </div>
+
+    <p id="setup-error" class="error" hidden></p>
+    <p class="tip">💡 Add this page to your Home Screen so it opens like an app. On iPhone: Share → “Add to Home Screen”.</p>
+  </div>
+</section>
+
+<!-- ========================================================================
+     SCREEN 2 — CAREGIVER
+========================================================================= -->
+<section id="screen-caregiver" class="screen" hidden>
+  <header class="topbar">
+    <div><span class="who" id="care-who"></span> · <span class="group" id="care-group"></span></div>
+    <button class="link" data-action="switch">Change</button>
+  </header>
+
+  <div class="care-main">
+    <div id="status-box" class="status-box idle">
+      <div class="status-emoji" id="status-emoji">🟢</div>
+      <div class="status-text" id="status-text">All quiet</div>
+      <div class="status-detail" id="status-detail">No active alert right now.</div>
+    </div>
+
+    <button id="btn-send" class="big-btn send">
+      <span class="big-btn-emoji">🔔</span>
+      <span data-send-label>Wake <span data-sleeper-name>Mum</span> up</span>
+    </button>
+
+    <button id="btn-cancel" class="ghost-btn" hidden>Cancel this alert (false alarm)</button>
+
+    <div class="log">
+      <h2>Tonight</h2>
+      <ul id="care-log" class="log-list"><li class="muted">Nothing yet.</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================================
+     SCREEN 3 — SLEEPER (Mum)
+========================================================================= -->
+<section id="screen-sleeper" class="screen" hidden>
+  <header class="topbar">
+    <div><span class="who" id="sleep-who"></span> · <span class="group" id="sleep-group"></span></div>
+    <button class="link" data-action="switch">Change</button>
+  </header>
+
+  <!-- Idle / armed state -->
+  <div id="sleeper-ready" class="sleeper-ready">
+    <div id="arm-panel">
+      <div class="moon">🌙</div>
+      <h2>Ready for the night?</h2>
+      <p>Tap the button, then put your phone on the charger and leave this screen open. It will ring loudly if someone needs to wake you.</p>
+      <button id="btn-arm" class="big-btn arm">
+        <span class="big-btn-emoji">✅</span>
+        <span>Arm for tonight</span>
+      </button>
+      <button id="btn-test" class="ghost-btn">▶︎ Test the alarm sound</button>
+      <p id="arm-hint" class="tip">Turn your volume up. Keep the phone plugged in — the screen stays on so the alarm always works.</p>
+    </div>
+
+    <div id="armed-panel" hidden>
+      <div class="moon">🌙</div>
+      <h2>You're all set 💙</h2>
+      <p>Keep this screen open and the phone charging. You can put it down now — it will ring if you're needed.</p>
+      <div class="armed-badge">🔔 Listening…</div>
+      <button id="btn-test-2" class="ghost-btn">▶︎ Test the alarm sound</button>
+      <button id="btn-disarm" class="ghost-btn">Turn off for now</button>
+      <div class="log">
+        <h2>Tonight</h2>
+        <ul id="sleep-log" class="log-list"><li class="muted">Nothing yet.</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full-screen ALARM overlay -->
+  <div id="alarm-overlay" class="alarm-overlay" hidden>
+    <div class="alarm-inner">
+      <div class="alarm-emoji">🩸</div>
+      <h1 class="alarm-title">Time to check your<br/>blood sugar</h1>
+      <p class="alarm-from" id="alarm-from"></p>
+
+      <button id="btn-confirm" class="confirm-btn">
+        <span class="confirm-tick">✓</span>
+        <span>I've checked — I'm OK</span>
+      </button>
+
+      <p class="alarm-or">…or tell them what you did:</p>
+      <div class="note-grid">
+        <button class="note-btn" data-note="Checked my levels">🩸 Checked levels</button>
+        <button class="note-btn" data-note="Took my medication">💊 Took meds</button>
+        <button class="note-btn" data-note="Had food / juice">🍞 Ate something</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Thank-you flash after confirming -->
+  <div id="thanks-overlay" class="thanks-overlay" hidden>
+    <div>
+      <div class="thanks-emoji">💙</div>
+      <h2>Thank you</h2>
+      <p>They've been told you're OK. Go back to sleep.</p>
+    </div>
+  </div>
+</section>
+
+<div id="fatal" class="fatal" hidden></div>
+
+<!-- Supabase client (loaded from CDN; safe, public library) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="./config.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
