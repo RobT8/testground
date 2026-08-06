@@ -13,6 +13,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # allows publishing the APK to a Release
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -32,9 +34,21 @@ jobs:
         working-directory: android
         run: gradle assembleDebug --no-daemon --stacktrace
 
-      - name: Upload APK
+      - name: Upload APK (artifact)
         uses: actions/upload-artifact@v4
         with:
           name: night-alert-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      # Publish to a Release so the APK has a direct, phone-friendly download link:
+      #   https://github.com/RobT8/testground/releases/download/apk-latest/app-debug.apk
+      - name: Publish APK to Release
+        if: github.ref == 'refs/heads/claude/diabetes-alert-app-m01v2y'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: Night Alert — latest APK
+          body: "Latest build of the Night Alert app. Tap app-debug.apk below to install."
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          make_latest: "true"
