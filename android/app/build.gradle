@@ -20,12 +20,25 @@ android {
         buildConfig true
     }
 
+    // A fixed signing key (committed, debug-only) so every cloud build has the
+    // SAME signature — that lets new versions install over the old one without
+    // uninstalling first. Not a Play Store release key.
+    signingConfigs {
+        shared {
+            storeFile file("nightalert.keystore")
+            storePassword "nightalert"
+            keyAlias "nightalert"
+            keyPassword "nightalert"
+        }
+    }
+
     buildTypes {
         debug {
-            // Debug APK is unsigned-for-store but installable via "unknown sources".
+            signingConfig signingConfigs.shared
         }
         release {
             minifyEnabled false
+            signingConfig signingConfigs.shared
         }
     }
 
