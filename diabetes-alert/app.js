@@ -64,6 +64,7 @@
   // ==========================================================================
   const Alarm = (function () {
     let ctx = null, master = null, timer = null, playing = false;
+    let remindTimer = null, reminding = false;
 
     function ensureCtx() {
       if (!ctx) {
@@ -111,6 +112,7 @@
     async function start() {
       ensureCtx();
       if (ctx.state === "suspended") { try { await ctx.resume(); } catch (e) {} }
+      stopReminding();
       if (playing) return;
       playing = true;
       scheduleBatch();
@@ -118,9 +120,42 @@
       startVibration();
     }
 
+    // A loud double-beep, repeated every 5s — the "checking" reminder.
+    function beep(startAt) {
+      [0, 0.25].forEach(off => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "square";
+        o.frequency.setValueAtTime(880, startAt + off);
+        g.gain.setValueAtTime(0.0001, startAt + off);
+        g.gain.exponentialRampToValueAtTime(0.7, startAt + off + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, startAt + off + 0.2);
+        o.connect(g); g.connect(master);
+        o.start(startAt + off); o.stop(startAt + off + 0.22);
+      });
+    }
+    function scheduleBeep() { if (reminding) beep(ctx.currentTime + 0.02); }
+
+    async function remind() {
+      ensureCtx();
+      if (ctx.state === "suspended") { try { await ctx.resume(); } catch (e) {} }
+      // Stop the loud siren, keep the reminder going.
+      playing = false;
+      if (timer) { clearInterval(timer); timer = null; }
+      if (reminding) return;
+      reminding = true;
+      scheduleBeep();
+      remindTimer = setInterval(scheduleBeep, 5000);
+    }
+
+    function stopReminding() {
+      reminding = false;
+      if (remindTimer) { clearInterval(remindTimer); remindTimer = null; }
+    }
+
     function stop() {
       playing = false;
       if (timer) { clearInterval(timer); timer = null; }
+      stopReminding();
       stopVibration();
     }
 
@@ -136,7 +171,7 @@
       if (navigator.vibrate) navigator.vibrate(0);
     }
 
-    return { unlock, start, stop, isPlaying: () => playing };
+    return { unlock, start, stop, remind, isPlaying: () => playing };
   })();
 
   // ==========================================================================
@@ -407,10 +442,9 @@
     $("btn-test").addEventListener("click", testAlarm);
     $("btn-test-2").addEventListener("click", testAlarm);
 
-    $("btn-confirm").addEventListener("click", () => doConfirm(null));
-    document.querySelectorAll(".note-btn[data-note]").forEach(b =>
+    $("btn-just-checking").addEventListener("click", doCheckingNow);
+    document.querySelectorAll(".outcome-btn").forEach(b =>
       b.addEventListener("click", () => doConfirm(b.dataset.note)));
-    $("btn-checking").addEventListener("click", doCheckingNow);
 
     subscribe(handleSleeperEvent);
     refreshSleeper();
@@ -457,8 +491,8 @@
         Alarm.start();
       }
     } else if (open && snoozed) {
-      // "I'm awake — checking now": stay quiet, keep the calm overlay visible.
-      Alarm.stop();
+      // "I'm awake — checking now": soft reminder beep, keep the calm overlay.
+      Alarm.remind();
     } else {
       // No active alert (or just confirmed) -> make sure we're silent.
       currentAlarmId = null;
@@ -471,7 +505,7 @@
     const id = currentAlarmId;
     if (!id) return;
     localSnoozeUntil = Date.now() + SNOOZE_MS;
-    Alarm.stop();
+    Alarm.remind();
     enterCheckingUI();
     snoozeAlert(id, new Date(Date.now() + SNOOZE_MS).toISOString()).catch(() => {});
     if (checkingTimer) clearTimeout(checkingTimer);
@@ -480,16 +514,14 @@
 
   function enterCheckingUI() {
     $("alarm-overlay").classList.add("checking");
-    $("alarm-title").innerHTML = "Take your time 👍";
-    $("btn-checking").hidden = true;
-    $("checking-banner").hidden = false;
+    $("alarm-stage").hidden = true;
+    $("checking-stage").hidden = false;
   }
 
   function resetAlarmModeUI() {
     $("alarm-overlay").classList.remove("checking");
-    $("alarm-title").innerHTML = "Time to check your<br>blood sugar";
-    $("btn-checking").hidden = false;
-    $("checking-banner").hidden = true;
+    $("checking-stage").hidden = true;
+    $("alarm-stage").hidden = false;
   }
 
   async function doConfirm(note) {

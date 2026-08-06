@@ -19,61 +19,84 @@
             android:gravity="center"
             android:padding="24dp">
 
-            <TextView
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="🩸" android:textSize="64sp"/>
-            <TextView
-                android:id="@+id/alarmTitle"
+            <!-- ===== STAGE 1: the alarm — one big button ===== -->
+            <LinearLayout
+                android:id="@+id/alarmStage"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" android:gravity="center"
-                android:text="Time to check your\nblood sugar"
-                android:textColor="@android:color/white" android:textSize="30sp" android:textStyle="bold"/>
-            <TextView
-                android:id="@+id/from"
+                android:orientation="vertical" android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="🩸" android:textSize="64sp"/>
+                <TextView
+                    android:id="@+id/alarmTitle"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:gravity="center"
+                    android:text="Time to check your\nblood sugar"
+                    android:textColor="@android:color/white" android:textSize="30sp" android:textStyle="bold"/>
+                <TextView
+                    android:id="@+id/from"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:gravity="center"
+                    android:textColor="#FFE4E4" android:textSize="16sp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnJustChecking"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="32dp"
+                    android:paddingVertical="30dp"
+                    android:text="👀  I'm awake, just checking"
+                    android:textSize="24sp" android:textStyle="bold"
+                    android:textColor="@color/bg"
+                    app:backgroundTint="@android:color/white"
+                    app:cornerRadius="22dp"/>
+            </LinearLayout>
+
+            <!-- ===== STAGE 2: what did you do? (3 outcomes) ===== -->
+            <LinearLayout
+                android:id="@+id/checkingStage"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" android:gravity="center"
-                android:textColor="#FFE4E4" android:textSize="16sp"/>
+                android:orientation="vertical" android:gravity="center"
+                android:visibility="gone">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/confirm"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="28dp"
-                android:paddingVertical="22dp"
-                android:text="✓  I've checked — I'm OK"
-                android:textSize="22sp" android:textStyle="bold"
-                android:textColor="@color/ok"
-                app:backgroundTint="@android:color/white"
-                app:cornerRadius="20dp"/>
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="👍" android:textSize="56sp"/>
+                <TextView
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp" android:gravity="center"
+                    android:text="Take your time.\nTap one when you're done:"
+                    android:textColor="@android:color/white" android:textSize="26sp" android:textStyle="bold"/>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/checking"
-                style="@style/NoteButton"
-                android:layout_marginTop="14dp"
-                android:text="👀  I'm awake — checking now (softens it)"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFood"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp" android:paddingVertical="22dp"
+                    android:text="🍞  Had food / juice"
+                    android:textSize="20sp" android:textStyle="bold"
+                    android:textColor="@color/bg" app:backgroundTint="@android:color/white" app:cornerRadius="18dp"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMeds"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp" android:paddingVertical="22dp"
+                    android:text="💊  Took medication"
+                    android:textSize="20sp" android:textStyle="bold"
+                    android:textColor="@color/bg" app:backgroundTint="@android:color/white" app:cornerRadius="18dp"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnNoAction"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp" android:paddingVertical="22dp"
+                    android:text="🚫  No action taken"
+                    android:textSize="20sp" android:textStyle="bold"
+                    android:textColor="@color/bg" app:backgroundTint="@android:color/white" app:cornerRadius="18dp"/>
 
-            <TextView
-                android:id="@+id/checkingBanner"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="14dp" android:gravity="center"
-                android:visibility="gone"
-                android:text="A soft reminder will keep sounding until you tap “I've checked”. The full alarm returns in 2 minutes."
-                android:textColor="#FFE4E4" android:textSize="15sp"/>
-
-            <TextView
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="22dp"
-                android:text="…or tell them what you did:"
-                android:textColor="#FFDADA" android:textSize="15sp"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/noteLevels" style="@style/NoteButton"
-                android:text="🩸  Checked my levels"/>
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/noteMeds" style="@style/NoteButton"
-                android:text="💊  Took my medication"/>
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/noteFood" style="@style/NoteButton"
-                android:text="🍞  Had food / juice"/>
+                <TextView
+                    android:id="@+id/checkingBanner"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp" android:gravity="center"
+                    android:text="A reminder beeps every few seconds until you tap one. The full alarm returns in 2 minutes."
+                    android:textColor="#D9D8F0" android:textSize="14sp"/>
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 

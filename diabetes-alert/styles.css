@@ -185,6 +185,12 @@ html, body {
   background: #16a34a; color: #fff; width: 44px; height: 44px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center; font-size: 26px;
 }
+.outcome-btn {
+  width: 100%; background: #fff; color: var(--ink); border: none;
+  border-radius: 16px; padding: 20px; font-size: 19px; font-weight: 800;
+  cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.3);
+}
+.outcome-btn:active { transform: scale(.98); }
 .alarm-or { margin: 22px 0 12px; color: #ffdada; font-size: 15px; }
 .note-grid { display: grid; gap: 10px; }
 .note-btn {

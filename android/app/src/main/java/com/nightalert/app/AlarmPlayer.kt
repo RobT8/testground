@@ -111,12 +111,14 @@ object AlarmPlayer {
         player = null
         if (vibrating) { try { vibrator?.cancel() } catch (_: Exception) {}; vibrating = false }
 
-        // Moderate the alarm volume so the reminder is quiet but audible.
+        // Keep the alarm stream at full volume so the reminder is clearly audible.
         val audio = app.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         saveVolume(audio)
         try {
-            val max = audio.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-            audio.setStreamVolume(AudioManager.STREAM_ALARM, (max * 0.4).toInt().coerceAtLeast(1), 0)
+            audio.setStreamVolume(
+                AudioManager.STREAM_ALARM,
+                audio.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0,
+            )
         } catch (_: Exception) {}
 
         mode = REMIND
@@ -126,11 +128,13 @@ object AlarmPlayer {
     private fun startReminder() {
         reminderThread = Thread {
             var tg: ToneGenerator? = null
-            try { tg = ToneGenerator(AudioManager.STREAM_ALARM, 70) } catch (_: Exception) {}
+            try { tg = ToneGenerator(AudioManager.STREAM_ALARM, ToneGenerator.MAX_VOLUME) } catch (_: Exception) {}
             try {
                 while (mode == REMIND) {
-                    try { tg?.startTone(ToneGenerator.TONE_PROP_BEEP2, 250) } catch (_: Exception) {}
-                    Thread.sleep(12_000)
+                    // A clear double-beep every 5 seconds (loud, but intermittent so
+                    // it reads as a reminder, not the full siren).
+                    try { tg?.startTone(ToneGenerator.TONE_PROP_BEEP2, 400) } catch (_: Exception) {}
+                    Thread.sleep(5_000)
                 }
             } catch (_: InterruptedException) {
             } finally {

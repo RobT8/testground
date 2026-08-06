@@ -127,23 +127,26 @@
   <!-- Full-screen ALARM overlay -->
   <div id="alarm-overlay" class="alarm-overlay" hidden>
     <div class="alarm-inner">
-      <div class="alarm-emoji">🩸</div>
-      <h1 class="alarm-title" id="alarm-title">Time to check your<br/>blood sugar</h1>
-      <p class="alarm-from" id="alarm-from"></p>
+      <!-- Stage 1: the alarm — one big button -->
+      <div id="alarm-stage">
+        <div class="alarm-emoji">🩸</div>
+        <h1 class="alarm-title">Time to check your<br/>blood sugar</h1>
+        <p class="alarm-from" id="alarm-from"></p>
+        <button id="btn-just-checking" class="confirm-btn">
+          <span>👀 I'm awake, just checking</span>
+        </button>
+      </div>
 
-      <button id="btn-confirm" class="confirm-btn">
-        <span class="confirm-tick">✓</span>
-        <span>I've checked — I'm OK</span>
-      </button>
-
-      <button id="btn-checking" class="note-btn" style="margin-top:12px">👀 I'm awake — checking now (quiets it)</button>
-      <p id="checking-banner" class="alarm-or" hidden>Take your time. The alarm returns in 2 minutes if you don't tap “I've checked”.</p>
-
-      <p class="alarm-or">…or tell them what you did:</p>
-      <div class="note-grid">
-        <button class="note-btn" data-note="Checked my levels">🩸 Checked levels</button>
-        <button class="note-btn" data-note="Took my medication">💊 Took meds</button>
-        <button class="note-btn" data-note="Had food / juice">🍞 Ate something</button>
+      <!-- Stage 2: what did you do? -->
+      <div id="checking-stage" hidden>
+        <div class="alarm-emoji">👍</div>
+        <h1 class="alarm-title">Take your time.<br/>Tap one when you're done:</h1>
+        <div class="note-grid" style="margin-top:20px">
+          <button class="outcome-btn" data-note="Had food / juice">🍞 Had food / juice</button>
+          <button class="outcome-btn" data-note="Took medication">💊 Took medication</button>
+          <button class="outcome-btn" data-note="No action taken">🚫 No action taken</button>
+        </div>
+        <p class="alarm-or" style="margin-top:16px">A reminder beeps every few seconds until you tap one. The full alarm returns in 2 minutes.</p>
       </div>
     </div>
   </div>
