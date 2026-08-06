@@ -118,7 +118,7 @@ class MainActivity : AppCompatActivity() {
     private fun showCarer() {
         show(b.carerPanel)
         b.carerWho.text = "${prefs.name} · ${prefs.group}"
-        b.btnWake.text = "🔔  Wake ${Config.SLEEPER_NAME} up"
+        b.btnWake.text = "🔔  Alert ${Config.SLEEPER_NAME}"
 
         // Enrol this carer phone for the check-in ping (needs notifications).
         requestNotificationPermissionIfNeeded()
@@ -159,24 +159,26 @@ class MainActivity : AppCompatActivity() {
                 carerActiveId = active.id   // remember what we're waiting on
             } else {
                 val last = recent.firstOrNull()
-                if (last != null && last.status == "confirmed") {
+                // Audible ping the moment an alert we were watching gets confirmed.
+                if (last != null && last.status == "confirmed" &&
+                    last.id == carerActiveId && last.id != carerPingedId) {
+                    carerPingedId = last.id
+                    carerActiveId = null
+                    carerPing()
+                }
+                // Show the "checked in" banner only for 5 minutes, then go quiet.
+                if (last != null && last.status == "confirmed" && isWithinMinutes(last.confirmedAt, 5)) {
                     b.carerStatusEmoji.text = "✅"
                     b.carerStatusTitle.text = "${Config.SLEEPER_NAME} has checked in"
                     val note = if (last.confirmedNote != null) "“${last.confirmedNote}” — " else ""
                     b.carerStatusDetail.text = "${note}confirmed at ${fmt(last.confirmedAt)}."
-                    // Audible ping the moment an alert we were watching gets confirmed.
-                    if (last.id == carerActiveId && last.id != carerPingedId) {
-                        carerPingedId = last.id
-                        carerActiveId = null
-                        carerPing()
-                    }
                 } else {
                     b.carerStatusEmoji.text = "🟢"
                     b.carerStatusTitle.text = "All quiet"
                     b.carerStatusDetail.text = "No active alert right now."
                 }
                 b.btnWake.isEnabled = true
-                b.btnWake.text = "🔔  Wake ${Config.SLEEPER_NAME} up"
+                b.btnWake.text = "🔔  Alert ${Config.SLEEPER_NAME}"
                 b.btnCancel.visibility = View.GONE
             }
             b.carerLog.text = renderLog(recent)
@@ -332,6 +334,16 @@ class MainActivity : AppCompatActivity() {
                 @Suppress("DEPRECATION") vib.vibrate(longArrayOf(0, 300, 200, 300), -1)
             }
         } catch (_: Exception) {}
+    }
+
+    /** True if the given UTC timestamp is within the last [minutes] minutes. */
+    private fun isWithinMinutes(iso: String?, minutes: Int): Boolean {
+        if (iso.isNullOrBlank()) return false
+        return try {
+            val clean = iso.substringBefore('.').substringBefore('+').removeSuffix("Z")
+            val t = parser.parse(clean)?.time ?: return false
+            System.currentTimeMillis() - t < minutes * 60_000L
+        } catch (_: Exception) { false }
     }
 
     /** True if the given UTC timestamp is still in the future (used for "checking"). */

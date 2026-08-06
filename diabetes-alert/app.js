@@ -347,6 +347,8 @@
 
     subscribe(() => refreshCaregiver());
     refreshCaregiver();
+    // Periodic refresh so the "checked in" banner clears itself after 5 minutes.
+    setInterval(refreshCaregiver, 15000);
   }
 
   async function refreshCaregiver() {
@@ -374,10 +376,10 @@
       send.querySelector("[data-send-label]").innerHTML = checking ? "She's checking…" : "Alarm is ringing…";
       cancel.hidden = false;
     } else {
-      // Was the most recent one just confirmed? Show a friendly "done" state.
+      // Show the "checked in" state only for 5 minutes, then go quiet.
       const recent = await getRecent();
       const last = recent[0];
-      if (last && last.status === "confirmed") {
+      if (last && last.status === "confirmed" && isRecentIso(last.confirmed_at, 5)) {
         box.classList.add("done");
         emoji.textContent = "✅";
         text.textContent = SLEEPER_NAME + " has checked in";
@@ -390,8 +392,7 @@
         detail.textContent = "No active alert right now.";
       }
       send.disabled = false;
-      send.querySelector("[data-send-label]").innerHTML =
-        "Wake " + SLEEPER_NAME + " up";
+      send.querySelector("[data-send-label]").innerHTML = "Alert " + SLEEPER_NAME;
       cancel.hidden = true;
     }
     renderLog($("care-log"), await getRecent());
@@ -412,6 +413,12 @@
     if (!iso) return false;
     const t = Date.parse(iso);
     return !isNaN(t) && t > Date.now();
+  }
+
+  function isRecentIso(iso, minutes) {
+    if (!iso) return false;
+    const t = Date.parse(iso);
+    return !isNaN(t) && (Date.now() - t) < minutes * 60000;
   }
 
   function initSleeper() {

@@ -126,7 +126,7 @@
                 android:id="@+id/btnWake" style="@style/BigButton"
                 app:backgroundTint="@color/danger"
                 android:layout_marginTop="18dp"
-                android:text="🔔  Wake Mum up"/>
+                android:text="🔔  Alert Mum"/>
 
             <Button android:id="@+id/btnCancel" style="@style/GhostButton"
                 android:text="Cancel this alert (false alarm)" android:visibility="gone"/>
