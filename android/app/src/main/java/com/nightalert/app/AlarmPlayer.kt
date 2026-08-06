@@ -4,7 +4,6 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
-import android.media.RingtoneManager
 import android.media.ToneGenerator
 import android.os.Build
 import android.os.PowerManager
@@ -71,9 +70,9 @@ object AlarmPlayer {
         try { player?.release() } catch (_: Exception) {}
         player = null
 
-        val uri = RingtoneManager.getActualDefaultRingtoneUri(app, RingtoneManager.TYPE_ALARM)
-            ?: RingtoneManager.getActualDefaultRingtoneUri(app, RingtoneManager.TYPE_RINGTONE)
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        // Always the bundled loud buzzer siren — never her personal ringtone.
+        val afd = try { app.resources.openRawResourceFd(R.raw.buzzer) } catch (_: Exception) { null }
+        if (afd == null) return true
         try {
             player = MediaPlayer().apply {
                 setAudioAttributes(
@@ -82,16 +81,19 @@ object AlarmPlayer {
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .build()
                 )
-                setDataSource(app, uri)
+                setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
                 isLooping = true
                 setOnErrorListener { _, _, _ ->
                     try { player?.release() } catch (_: Exception) {}
                     player = null; true
                 }
-                setOnPreparedListener { it.start() }
+                setOnPreparedListener { it.start(); try { afd.close() } catch (_: Exception) {} }
                 prepareAsync()
             }
-        } catch (_: Exception) { player = null }
+        } catch (_: Exception) {
+            try { afd.close() } catch (_: Exception) {}
+            player = null
+        }
         return true
     }
 

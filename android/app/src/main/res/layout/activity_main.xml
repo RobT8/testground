@@ -188,11 +188,11 @@
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:text="🌙" android:textSize="52sp"/>
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="You're all set 💙" android:textColor="@color/ink"
+                    android:text="Always listening 💙" android:textColor="@color/ink"
                     android:textSize="24sp" android:textStyle="bold" android:layout_marginTop="8dp"/>
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:gravity="center" android:layout_marginTop="8dp"
-                    android:text="You can lock the phone and go to sleep. Keep it charged if you can. It will ring if you're needed."
+                    android:text="Nothing to do before bed — this phone is always ready and will ring loudly if you're needed. Just keep it charged when you can."
                     android:textColor="@color/muted" android:textSize="16sp"/>
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:layout_marginTop="14dp" android:text="🔔  Listening…"

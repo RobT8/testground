@@ -41,6 +41,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("armed", false)
         set(v) = sp.edit().putBoolean("armed", v).apply()
 
+    /** Whether we've already shown the one-time battery-exemption prompt. */
+    var batteryAsked: Boolean
+        get() = sp.getBoolean("battery_asked", false)
+        set(v) = sp.edit().putBoolean("battery_asked", v).apply()
+
     val isSetUp: Boolean get() = name.isNotBlank() && group.isNotBlank() && role.isNotBlank()
 
     fun clear() = sp.edit().clear().apply()

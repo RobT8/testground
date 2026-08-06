@@ -12,7 +12,6 @@ import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.nightalert.app.databinding.ActivityMainBinding
@@ -190,37 +189,27 @@ class MainActivity : AppCompatActivity() {
     private fun showSleeper() {
         show(b.sleeperPanel)
         b.sleeperWho.text = "${prefs.name} · ${prefs.group}"
-        updateArmedUi()
 
-        b.btnArm.setOnClickListener { arm() }
-        b.btnDisarm.setOnClickListener { disarm() }
+        // Always-on: the phone starts listening automatically — no nightly arming.
+        b.armPanel.visibility = View.GONE
+        b.armedPanel.visibility = View.VISIBLE
+        b.btnDisarm.visibility = View.GONE
         b.btnTest.setOnClickListener { testAlarm() }
         b.btnTest2.setOnClickListener { testAlarm() }
 
+        ensureListening()
         startRefresh { bg({ Supa.getRecent(prefs.group) }) { b.sleeperLog.text = renderLog(it) } }
     }
 
-    private fun updateArmedUi() {
-        b.armPanel.visibility = if (prefs.armed) View.GONE else View.VISIBLE
-        b.armedPanel.visibility = if (prefs.armed) View.VISIBLE else View.GONE
-    }
-
-    private fun arm() {
-        requestNotificationPermissionIfNeeded()
-        askIgnoreBatteryOptimizations()
+    /** Start (or keep) the watcher running. Safe to call every time the app opens. */
+    private fun ensureListening() {
         prefs.armed = true
+        requestNotificationPermissionIfNeeded()
+        // Ask to ignore battery optimisation once, so Android won't kill the watcher.
+        if (!prefs.batteryAsked) { prefs.batteryAsked = true; askIgnoreBatteryOptimizations() }
         AlarmService.start(this)
         Heartbeat.schedule(this)
-        Fcm.registerToken(this)   // enrol for instant push (no-op until Firebase is set up)
-        updateArmedUi()
-        Toast.makeText(this, "Armed — you'll be woken if you're needed.", Toast.LENGTH_LONG).show()
-    }
-
-    private fun disarm() {
-        prefs.armed = false
-        AlarmService.stop(this)
-        Heartbeat.cancel(this)
-        updateArmedUi()
+        Fcm.registerToken(this)   // enrol this phone for the instant push
     }
 
     private fun testAlarm() {
