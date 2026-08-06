@@ -63,31 +63,85 @@ class AlarmService : Service() {
         if (group.isBlank()) return
         try {
             val active = Supa.getActiveAlert(group)
-            if (active != null && active.status == "active" && active.id != prefs.confirmedAlertId) {
-                // An unconfirmed alert exists -> keep the alarm going, relentlessly.
-                // ensureAlarming restarts the sound if it stopped and re-maxes the
-                // volume, so it auto-repeats until she actually confirms.
-                val isNew = prefs.lastRungAlertId != active.id
+            val isOpen = active != null && active.status == "active" &&
+                active.id != prefs.confirmedAlertId
+            val snoozed = isOpen && isSnoozed(active!!)
+
+            if (isOpen && !snoozed) {
+                // An unconfirmed, un-snoozed alert -> keep the alarm going,
+                // relentlessly. ensureAlarming restarts the sound if it stopped and
+                // re-maxes the volume, so it auto-repeats until she confirms.
+                val isNew = prefs.lastRungAlertId != active!!.id
                 if (isNew) prefs.lastRungAlertId = active.id
                 ringingForAlert = true
                 val restarted = AlarmPlayer.ensureAlarming(this)
                 // Re-surface the full-screen screen on the first ring and any time
-                // the sound had to be restarted (e.g. it was dismissed).
+                // the sound had to be restarted (dismissed, or a snooze expired).
                 if (isNew || restarted) showAlarmNotification(active)
+                cancelNotif(CHECKING_NOTIF_ID)
+            } else if (snoozed) {
+                // "I'm awake — checking now": stay quiet, but keep a tap-to-return
+                // notification. Do NOT broadcast a stop (that would close her screen).
+                if (AlarmPlayer.isPlaying) AlarmPlayer.stop(this)
+                ringingForAlert = false
+                cancelNotif(ALARM_NOTIF_ID)
+                showCheckingNotification(active!!)
             } else {
-                // Confirmed / cancelled / just-confirmed-locally -> go quiet.
+                // Confirmed / cancelled / no alert -> fully quiet.
                 if (ringingForAlert && AlarmPlayer.isPlaying) {
                     AlarmPlayer.stop(this)
                     LocalBroadcastManager.getInstance(this)
                         .sendBroadcast(Intent(ACTION_ALARM_STOPPED))
                 }
                 ringingForAlert = false
-                (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-                    .cancel(ALARM_NOTIF_ID)
+                cancelNotif(ALARM_NOTIF_ID)
+                cancelNotif(CHECKING_NOTIF_ID)
             }
         } catch (_: Exception) {
             // Network hiccup — ignore and try again next tick.
         }
+    }
+
+    private fun isSnoozed(alert: Alert): Boolean {
+        val now = System.currentTimeMillis()
+        if (now < prefs.localSnoozeUntil) return true
+        val until = parseIsoMillis(alert.snoozedUntil) ?: return false
+        return now < until
+    }
+
+    private fun parseIsoMillis(iso: String?): Long? {
+        if (iso.isNullOrBlank()) return null
+        return try {
+            val clean = iso.substringBefore('.').substringBefore('+').removeSuffix("Z")
+            val f = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+            f.timeZone = java.util.TimeZone.getTimeZone("UTC")
+            f.parse(clean)?.time
+        } catch (_: Exception) { null }
+    }
+
+    private fun cancelNotif(id: Int) =
+        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(id)
+
+    private fun showCheckingNotification(alert: Alert) {
+        val pi = PendingIntent.getActivity(
+            this, 2,
+            Intent(this, AlarmActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putExtra(EXTRA_ALERT_ID, alert.id)
+                putExtra(EXTRA_FROM, alert.requesters().joinToString(" & "))
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notif = NotificationCompat.Builder(this, WATCH_CHANNEL)
+            .setSmallIcon(R.drawable.ic_alarm_stat)
+            .setContentTitle("Checking your levels…")
+            .setContentText("Tap here when you're done, to let them know.")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setOngoing(true)
+            .setContentIntent(pi)
+            .build()
+        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+            .notify(CHECKING_NOTIF_ID, notif)
     }
 
     private fun showAlarmNotification(alert: Alert) {
@@ -164,6 +218,7 @@ class AlarmService : Service() {
         const val ALARM_CHANNEL = "alarm"
         const val WATCH_NOTIF_ID = 1001
         const val ALARM_NOTIF_ID = 1002
+        const val CHECKING_NOTIF_ID = 1003
         const val POLL_INTERVAL_MS = 4000L
 
         const val ACTION_POLL = "com.nightalert.app.POLL"

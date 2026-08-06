@@ -84,6 +84,11 @@ Send `app-debug.apk` to each phone (email, Google Drive, USB…). On each phone:
   the volume within seconds. The only things that stop it are her tapping a
   confirm button, or **any carer pressing "Cancel this alert (false alarm)"** —
   so if it's a false alarm and she can't be roused, a carer can silence it.
+- **"I'm awake — checking now"** button: if she needs a quiet minute to read her
+  levels (e.g. in her CGM app), tapping this **silences the siren for 2 minutes**
+  without confirming. Carers see **"awake, checking…"** meanwhile. If she doesn't
+  tap **I've checked** within those 2 minutes, **the alarm comes back** — so she
+  still can't drift back to sleep unconfirmed.
 
 ---
 

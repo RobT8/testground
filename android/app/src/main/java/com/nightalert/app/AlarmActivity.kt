@@ -7,21 +7,36 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.nightalert.app.databinding.ActivityAlarmBinding
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 /**
  * The full-screen, impossible-to-miss wake-up screen shown on the sleeper's
  * phone. Appears over the lock screen, turns the screen on, and stays until she
  * taps a confirm button.
+ *
+ * "I'm awake — checking now" quiets the siren for a couple of minutes (so she can
+ * read her levels / another app in peace) without confirming; if she hasn't
+ * tapped a confirm button by the time it elapses, the alarm returns.
  */
 class AlarmActivity : AppCompatActivity() {
 
     private lateinit var b: ActivityAlarmBinding
     private lateinit var prefs: Prefs
     private var alertId: String? = null
+
+    private val ui = Handler(Looper.getMainLooper())
+    private val backToAlarm = Runnable { resetToAlarmMode() }
 
     private val stopReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) { finish() }
@@ -46,15 +61,56 @@ class AlarmActivity : AppCompatActivity() {
         b.noteLevels.setOnClickListener { confirm("Checked my levels") }
         b.noteMeds.setOnClickListener { confirm("Took my medication") }
         b.noteFood.setOnClickListener { confirm("Had food / juice") }
+        b.checking.setOnClickListener { enterCheckingMode() }
 
         LocalBroadcastManager.getInstance(this)
             .registerReceiver(stopReceiver, IntentFilter(AlarmService.ACTION_ALARM_STOPPED))
+    }
+
+    /** The alarm resumed (snooze expired) and re-launched us — restore alarm mode. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        resetToAlarmMode()
+    }
+
+    // ---- "I'm awake — checking now" -----------------------------------------
+    private fun enterCheckingMode() {
+        val id = alertId ?: return
+
+        // Locally + on the server, quiet the siren for a couple of minutes.
+        prefs.localSnoozeUntil = System.currentTimeMillis() + SNOOZE_MS
+        AlarmPlayer.stop(this)
+        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+            .cancel(AlarmService.ALARM_NOTIF_ID)
+        Thread { try { Supa.snoozeAlert(id, isoInMillis(SNOOZE_MS)) } catch (_: Exception) {} }.start()
+
+        // Calm the screen down.
+        b.root.setBackgroundColor(ContextCompat.getColor(this, R.color.bg))
+        b.alarmTitle.text = "Take your time 👍"
+        b.checking.visibility = View.GONE
+        b.checkingBanner.visibility = View.VISIBLE
+
+        // Bring the loud alarm back if she hasn't confirmed in time.
+        ui.removeCallbacks(backToAlarm)
+        ui.postDelayed(backToAlarm, SNOOZE_MS)
+    }
+
+    private fun resetToAlarmMode() {
+        prefs.localSnoozeUntil = 0L
+        b.root.setBackgroundColor(ContextCompat.getColor(this, R.color.alarm_bg))
+        b.alarmTitle.text = "Time to check your\nblood sugar"
+        b.checkingBanner.visibility = View.GONE
+        b.checking.visibility = View.VISIBLE
+        if (!AlarmPlayer.isPlaying) AlarmPlayer.ensureAlarming(this)
     }
 
     private fun confirm(note: String?) {
         // Guard first: tell the watcher this alert is done, so it won't re-ring
         // in the moment before the confirmation reaches the server.
         alertId?.let { prefs.confirmedAlertId = it }
+        prefs.localSnoozeUntil = 0L
+        ui.removeCallbacks(backToAlarm)
 
         // Stop the noise immediately for a good experience.
         AlarmPlayer.stop(this)
@@ -62,8 +118,8 @@ class AlarmActivity : AppCompatActivity() {
             .cancel(AlarmService.ALARM_NOTIF_ID)
 
         // Show the thank-you state right away.
-        b.mainPanel.visibility = android.view.View.GONE
-        b.thanksPanel.visibility = android.view.View.VISIBLE
+        b.mainPanel.visibility = View.GONE
+        b.thanksPanel.visibility = View.VISIBLE
 
         val id = alertId
         if (id != null) {
@@ -73,6 +129,12 @@ class AlarmActivity : AppCompatActivity() {
         }
 
         b.root.postDelayed({ finish() }, 3500)
+    }
+
+    private fun isoInMillis(ms: Long): String {
+        val f = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+        f.timeZone = TimeZone.getTimeZone("UTC")
+        return f.format(Date(System.currentTimeMillis() + ms))
     }
 
     private fun showOverLockScreen() {
@@ -90,6 +152,7 @@ class AlarmActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        ui.removeCallbacks(backToAlarm)
         LocalBroadcastManager.getInstance(this).unregisterReceiver(stopReceiver)
         super.onDestroy()
     }
@@ -97,5 +160,9 @@ class AlarmActivity : AppCompatActivity() {
     @Deprecated("Blocked on purpose — she must confirm.")
     override fun onBackPressed() {
         // Ignore the back button so the alarm can't be swiped away by accident.
+    }
+
+    companion object {
+        const val SNOOZE_MS = 2 * 60 * 1000L
     }
 }

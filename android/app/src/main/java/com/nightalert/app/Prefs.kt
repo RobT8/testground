@@ -30,6 +30,12 @@ class Prefs(context: Context) {
         get() = sp.getString("confirmed_id", "") ?: ""
         set(v) = sp.edit().putString("confirmed_id", v).apply()
 
+    /** Epoch millis until which the siren is locally snoozed ("checking now"),
+     *  so the watcher stays quiet even before the server update propagates. */
+    var localSnoozeUntil: Long
+        get() = sp.getLong("local_snooze_until", 0L)
+        set(v) = sp.edit().putLong("local_snooze_until", v).apply()
+
     /** Whether the sleeper has armed the watcher for the night. */
     var armed: Boolean
         get() = sp.getBoolean("armed", false)

@@ -23,6 +23,7 @@
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="🩸" android:textSize="64sp"/>
             <TextView
+                android:id="@+id/alarmTitle"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="8dp" android:gravity="center"
                 android:text="Time to check your\nblood sugar"
@@ -43,6 +44,20 @@
                 android:textColor="@color/ok"
                 app:backgroundTint="@android:color/white"
                 app:cornerRadius="20dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/checking"
+                style="@style/NoteButton"
+                android:layout_marginTop="14dp"
+                android:text="👀  I'm awake — checking now (quiets it)"/>
+
+            <TextView
+                android:id="@+id/checkingBanner"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="14dp" android:gravity="center"
+                android:visibility="gone"
+                android:text="Take your time. The alarm will come back in 2 minutes if you don't tap “I've checked”."
+                android:textColor="#FFE4E4" android:textSize="15sp"/>
 
             <TextView
                 android:layout_width="wrap_content" android:layout_height="wrap_content"

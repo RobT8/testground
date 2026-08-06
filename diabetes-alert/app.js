@@ -225,6 +225,10 @@
     await sb.from("night_alerts").update({ status: "cancelled" }).eq("id", id);
   }
 
+  async function snoozeAlert(id, untilIso) {
+    await sb.from("night_alerts").update({ snoozed_until: untilIso }).eq("id", id);
+  }
+
   async function confirmAlert(id, note) {
     await sb.from("night_alerts").update({
       status: "confirmed",
@@ -310,13 +314,20 @@
 
     if (active) {
       box.classList.add("waiting");
-      emoji.textContent = "🔔";
-      text.textContent = SLEEPER_NAME + " is being woken…";
-      const who = [active.created_by, ...(active.also_requested_by || [])];
-      detail.textContent = "Alarm sent by " + who.join(", ") + " at " + fmtTime(active.created_at) +
-                           ". Waiting for " + SLEEPER_NAME + " to check in.";
+      const checking = isFuture(active.snoozed_until);
+      if (checking) {
+        emoji.textContent = "🔎";
+        text.textContent = SLEEPER_NAME + " is awake, checking…";
+        detail.textContent = "She's checking her levels now — you'll see the confirmation shortly.";
+      } else {
+        emoji.textContent = "🔔";
+        text.textContent = SLEEPER_NAME + " is being woken…";
+        const who = [active.created_by, ...(active.also_requested_by || [])];
+        detail.textContent = "Alarm sent by " + who.join(", ") + " at " + fmtTime(active.created_at) +
+                             ". Waiting for " + SLEEPER_NAME + " to check in.";
+      }
       send.disabled = true;
-      send.querySelector("[data-send-label]").innerHTML = "Alarm is ringing…";
+      send.querySelector("[data-send-label]").innerHTML = checking ? "She's checking…" : "Alarm is ringing…";
       cancel.hidden = false;
     } else {
       // Was the most recent one just confirmed? Show a friendly "done" state.
@@ -349,6 +360,15 @@
   let currentAlarmId = null;
   let confirmedId = null;     // alert we just confirmed locally (don't re-ring it)
   let sleeperTimer = null;    // periodic self-heal while armed (auto-repeat)
+  let localSnoozeUntil = 0;   // ms until which we stay quiet ("checking now")
+  let checkingTimer = null;   // brings the alarm back when the snooze elapses
+  const SNOOZE_MS = 2 * 60 * 1000;
+
+  function isFuture(iso) {
+    if (!iso) return false;
+    const t = Date.parse(iso);
+    return !isNaN(t) && t > Date.now();
+  }
 
   function initSleeper() {
     $("sleep-who").textContent   = me.name;
@@ -379,8 +399,9 @@
     $("btn-test-2").addEventListener("click", testAlarm);
 
     $("btn-confirm").addEventListener("click", () => doConfirm(null));
-    document.querySelectorAll(".note-btn").forEach(b =>
+    document.querySelectorAll(".note-btn[data-note]").forEach(b =>
       b.addEventListener("click", () => doConfirm(b.dataset.note)));
+    $("btn-checking").addEventListener("click", doCheckingNow);
 
     subscribe(handleSleeperEvent);
     refreshSleeper();
@@ -407,20 +428,28 @@
     renderLog($("sleep-log"), await getRecent());
     const active = await getActiveAlert();
 
-    if (active && armed && active.id !== confirmedId) {
+    const open = active && armed && active.id !== confirmedId;
+    const snoozed = open && (Date.now() < localSnoozeUntil || isFuture(active.snoozed_until));
+
+    if (open && !snoozed) {
       if (currentAlarmId !== active.id) {
         // New alert -> ring.
         currentAlarmId = active.id;
         const who = [active.created_by, ...(active.also_requested_by || [])];
         $("alarm-from").textContent = who.join(" & ") + " asked you to check.";
+        resetAlarmModeUI();
         $("alarm-overlay").hidden = false;
         $("thanks-overlay").hidden = true;
         Alarm.start();
       } else if (!Alarm.isPlaying()) {
-        // Auto-repeat: alarm stopped but she hasn't confirmed -> ring again.
+        // Auto-repeat / snooze just elapsed -> ring again.
+        resetAlarmModeUI();
         $("alarm-overlay").hidden = false;
         Alarm.start();
       }
+    } else if (open && snoozed) {
+      // "I'm awake — checking now": stay quiet, keep the calm overlay visible.
+      Alarm.stop();
     } else {
       // No active alert (or just confirmed) -> make sure we're silent.
       currentAlarmId = null;
@@ -429,10 +458,38 @@
     }
   }
 
+  function doCheckingNow() {
+    const id = currentAlarmId;
+    if (!id) return;
+    localSnoozeUntil = Date.now() + SNOOZE_MS;
+    Alarm.stop();
+    enterCheckingUI();
+    snoozeAlert(id, new Date(Date.now() + SNOOZE_MS).toISOString()).catch(() => {});
+    if (checkingTimer) clearTimeout(checkingTimer);
+    checkingTimer = setTimeout(() => { localSnoozeUntil = 0; refreshSleeper(); }, SNOOZE_MS);
+  }
+
+  function enterCheckingUI() {
+    $("alarm-overlay").classList.add("checking");
+    $("alarm-title").innerHTML = "Take your time 👍";
+    $("btn-checking").hidden = true;
+    $("checking-banner").hidden = false;
+  }
+
+  function resetAlarmModeUI() {
+    $("alarm-overlay").classList.remove("checking");
+    $("alarm-title").innerHTML = "Time to check your<br>blood sugar";
+    $("btn-checking").hidden = false;
+    $("checking-banner").hidden = true;
+  }
+
   async function doConfirm(note) {
     Alarm.stop();
     const id = currentAlarmId;
     if (id) confirmedId = id;   // guard: don't let the self-heal re-ring this one
+    localSnoozeUntil = 0;
+    if (checkingTimer) { clearTimeout(checkingTimer); checkingTimer = null; }
+    resetAlarmModeUI();
     $("alarm-overlay").hidden = true;
     $("thanks-overlay").hidden = false;
     if (id) { try { await confirmAlert(id, note); } catch (e) { console.warn(e); } }

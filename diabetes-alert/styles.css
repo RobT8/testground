@@ -166,6 +166,8 @@ html, body {
   0%,49%   { background: #b91c1c; }
   50%,100% { background: #7f1d1d; }
 }
+/* Calm "checking now" mode: stop the red flashing */
+.alarm-overlay.checking { animation: none; background: var(--bg); }
 .alarm-inner { width: 100%; max-width: 460px; color: #fff; }
 .alarm-emoji { font-size: 64px; animation: shake .5s ease-in-out infinite; }
 @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }

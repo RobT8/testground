@@ -128,13 +128,16 @@
   <div id="alarm-overlay" class="alarm-overlay" hidden>
     <div class="alarm-inner">
       <div class="alarm-emoji">🩸</div>
-      <h1 class="alarm-title">Time to check your<br/>blood sugar</h1>
+      <h1 class="alarm-title" id="alarm-title">Time to check your<br/>blood sugar</h1>
       <p class="alarm-from" id="alarm-from"></p>
 
       <button id="btn-confirm" class="confirm-btn">
         <span class="confirm-tick">✓</span>
         <span>I've checked — I'm OK</span>
       </button>
+
+      <button id="btn-checking" class="note-btn" style="margin-top:12px">👀 I'm awake — checking now (quiets it)</button>
+      <p id="checking-banner" class="alarm-or" hidden>Take your time. The alarm returns in 2 minutes if you don't tap “I've checked”.</p>
 
       <p class="alarm-or">…or tell them what you did:</p>
       <div class="note-grid">

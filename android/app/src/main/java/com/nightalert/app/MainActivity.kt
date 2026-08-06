@@ -124,13 +124,21 @@ class MainActivity : AppCompatActivity() {
     private fun refreshCarer() {
         bg({ Pair(Supa.getActiveAlert(prefs.group), Supa.getRecent(prefs.group)) }) { (active, recent) ->
             if (active != null) {
-                b.carerStatusEmoji.text = "🔔"
-                b.carerStatusTitle.text = "${Config.SLEEPER_NAME} is being woken…"
-                val who = active.requesters().joinToString(", ")
-                b.carerStatusDetail.text =
-                    "Alarm sent by $who at ${fmt(active.createdAt)}. Waiting for ${Config.SLEEPER_NAME} to check in."
+                val checking = isFuture(active.snoozedUntil)
+                if (checking) {
+                    b.carerStatusEmoji.text = "🔎"
+                    b.carerStatusTitle.text = "${Config.SLEEPER_NAME} is awake, checking…"
+                    b.carerStatusDetail.text =
+                        "She's checking her levels now — you'll see ✅ when she confirms."
+                } else {
+                    b.carerStatusEmoji.text = "🔔"
+                    b.carerStatusTitle.text = "${Config.SLEEPER_NAME} is being woken…"
+                    val who = active.requesters().joinToString(", ")
+                    b.carerStatusDetail.text =
+                        "Alarm sent by $who at ${fmt(active.createdAt)}. Waiting for ${Config.SLEEPER_NAME} to check in."
+                }
                 b.btnWake.isEnabled = false
-                b.btnWake.text = "Alarm is ringing…"
+                b.btnWake.text = if (checking) "She's checking…" else "Alarm is ringing…"
                 b.btnCancel.visibility = View.VISIBLE
             } else {
                 val last = recent.firstOrNull()
@@ -289,5 +297,14 @@ class MainActivity : AppCompatActivity() {
             val clean = iso.substringBefore('.').substringBefore('+').removeSuffix("Z")
             outFmt.format(parser.parse(clean)!!)
         } catch (_: Exception) { "" }
+    }
+
+    /** True if the given UTC timestamp is still in the future (used for "checking"). */
+    private fun isFuture(iso: String?): Boolean {
+        if (iso.isNullOrBlank()) return false
+        return try {
+            val clean = iso.substringBefore('.').substringBefore('+').removeSuffix("Z")
+            (parser.parse(clean)?.time ?: 0L) > System.currentTimeMillis()
+        } catch (_: Exception) { false }
     }
 }

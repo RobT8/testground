@@ -18,7 +18,8 @@ data class Alert(
     val alsoRequestedBy: List<String>,
     val confirmedAt: String?,
     val confirmedBy: String?,
-    val confirmedNote: String?
+    val confirmedNote: String?,
+    val snoozedUntil: String?
 ) {
     /** All carers who asked for this alert. */
     fun requesters(): List<String> = (listOf(createdBy) + alsoRequestedBy).distinct()
@@ -62,7 +63,8 @@ object Supa {
                     alsoRequestedBy = also,
                     confirmedAt = o.optStringOrNull("confirmed_at"),
                     confirmedBy = o.optStringOrNull("confirmed_by"),
-                    confirmedNote = o.optStringOrNull("confirmed_note")
+                    confirmedNote = o.optStringOrNull("confirmed_note"),
+                    snoozedUntil = o.optStringOrNull("snoozed_until")
                 )
             )
         }
@@ -153,6 +155,10 @@ object Supa {
     }
 
     fun cancelAlert(id: String) = patch(id, JSONObject().put("status", "cancelled"))
+
+    /** Quiet the siren for a couple of minutes without confirming ("checking now"). */
+    fun snoozeAlert(id: String, untilIso: String) =
+        patch(id, JSONObject().put("snoozed_until", untilIso))
 
     fun confirmAlert(id: String, note: String?, by: String) = patch(
         id,
