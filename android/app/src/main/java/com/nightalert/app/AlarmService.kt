@@ -77,7 +77,10 @@ class AlarmService : Service() {
                 val restarted = AlarmPlayer.ensureAlarming(this)
                 // Re-surface the full-screen screen on the first ring and any time
                 // the sound had to be restarted (dismissed, or a snooze expired).
-                if (isNew || restarted) showAlarmNotification(active)
+                if (isNew || restarted) {
+                    showAlarmNotification(active)   // covers locked / background (full-screen intent)
+                    launchAlarmActivity(active)     // covers app-in-foreground (FSI won't auto-launch then)
+                }
                 cancelNotif(CHECKING_NOTIF_ID)
             } else if (snoozed) {
                 // "I'm awake — checking now": drop to the gentle reminder beep
@@ -142,6 +145,18 @@ class AlarmService : Service() {
             .build()
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
             .notify(CHECKING_NOTIF_ID, notif)
+    }
+
+    /** Directly open the full-screen alarm. Works when the app is in the
+     *  foreground (where a full-screen-intent notification only shows a heads-up
+     *  banner); harmlessly blocked in the background, where the FSI covers us. */
+    private fun launchAlarmActivity(alert: Alert) {
+        val i = Intent(this, AlarmActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            putExtra(EXTRA_ALERT_ID, alert.id)
+            putExtra(EXTRA_FROM, alert.requesters().joinToString(" & "))
+        }
+        try { startActivity(i) } catch (_: Exception) {}
     }
 
     private fun showAlarmNotification(alert: Alert) {

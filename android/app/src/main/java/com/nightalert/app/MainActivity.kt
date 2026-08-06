@@ -26,6 +26,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var prefs: Prefs
     private val ui = Handler(Looper.getMainLooper())
     private var refreshRunnable: Runnable? = null
+    private var carerActiveId: String? = null   // alert this carer is waiting on
+    private var carerPingedId: String? = null   // alert we've already pinged for
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -155,6 +157,7 @@ class MainActivity : AppCompatActivity() {
                 b.btnWake.isEnabled = false
                 b.btnWake.text = if (checking) "She's checking…" else "Alarm is ringing…"
                 b.btnCancel.visibility = View.VISIBLE
+                carerActiveId = active.id   // remember what we're waiting on
             } else {
                 val last = recent.firstOrNull()
                 if (last != null && last.status == "confirmed") {
@@ -162,6 +165,12 @@ class MainActivity : AppCompatActivity() {
                     b.carerStatusTitle.text = "${Config.SLEEPER_NAME} has checked in"
                     val note = if (last.confirmedNote != null) "“${last.confirmedNote}” — " else ""
                     b.carerStatusDetail.text = "${note}confirmed at ${fmt(last.confirmedAt)}."
+                    // Audible ping the moment an alert we were watching gets confirmed.
+                    if (last.id == carerActiveId && last.id != carerPingedId) {
+                        carerPingedId = last.id
+                        carerActiveId = null
+                        carerPing()
+                    }
                 } else {
                     b.carerStatusEmoji.text = "🟢"
                     b.carerStatusTitle.text = "All quiet"
@@ -312,6 +321,28 @@ class MainActivity : AppCompatActivity() {
             val clean = iso.substringBefore('.').substringBefore('+').removeSuffix("Z")
             outFmt.format(parser.parse(clean)!!)
         } catch (_: Exception) { "" }
+    }
+
+    /** An audible + haptic ping on the carer's phone when she checks in. Uses the
+     *  alarm stream so it's heard even on silent; needs no notification permission. */
+    private fun carerPing() {
+        try {
+            val tg = android.media.ToneGenerator(android.media.AudioManager.STREAM_ALARM, 90)
+            tg.startTone(android.media.ToneGenerator.TONE_PROP_ACK, 600)
+            ui.postDelayed({ try { tg.release() } catch (_: Exception) {} }, 1500)
+        } catch (_: Exception) {}
+        try {
+            val vib = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as android.os.VibratorManager).defaultVibrator
+            } else {
+                @Suppress("DEPRECATION") getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vib.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 300, 200, 300), -1))
+            } else {
+                @Suppress("DEPRECATION") vib.vibrate(longArrayOf(0, 300, 200, 300), -1)
+            }
+        } catch (_: Exception) {}
     }
 
     /** True if the given UTC timestamp is still in the future (used for "checking"). */
