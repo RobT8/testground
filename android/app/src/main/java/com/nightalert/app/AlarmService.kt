@@ -80,10 +80,10 @@ class AlarmService : Service() {
                 if (isNew || restarted) showAlarmNotification(active)
                 cancelNotif(CHECKING_NOTIF_ID)
             } else if (snoozed) {
-                // "I'm awake — checking now": stay quiet, but keep a tap-to-return
-                // notification. Do NOT broadcast a stop (that would close her screen).
-                if (AlarmPlayer.isPlaying) AlarmPlayer.stop(this)
-                ringingForAlert = false
+                // "I'm awake — checking now": drop to the gentle reminder beep
+                // (not silence) and keep a tap-to-return notification.
+                AlarmPlayer.ensureReminding(this)
+                ringingForAlert = true
                 cancelNotif(ALARM_NOTIF_ID)
                 showCheckingNotification(active!!)
             } else {

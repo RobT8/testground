@@ -78,9 +78,9 @@ class AlarmActivity : AppCompatActivity() {
     private fun enterCheckingMode() {
         val id = alertId ?: return
 
-        // Locally + on the server, quiet the siren for a couple of minutes.
+        // Locally + on the server, drop to the gentle reminder for a couple of minutes.
         prefs.localSnoozeUntil = System.currentTimeMillis() + SNOOZE_MS
-        AlarmPlayer.stop(this)
+        AlarmPlayer.ensureReminding(this)
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
             .cancel(AlarmService.ALARM_NOTIF_ID)
         Thread { try { Supa.snoozeAlert(id, isoInMillis(SNOOZE_MS)) } catch (_: Exception) {} }.start()
@@ -102,7 +102,7 @@ class AlarmActivity : AppCompatActivity() {
         b.alarmTitle.text = "Time to check your\nblood sugar"
         b.checkingBanner.visibility = View.GONE
         b.checking.visibility = View.VISIBLE
-        if (!AlarmPlayer.isPlaying) AlarmPlayer.ensureAlarming(this)
+        AlarmPlayer.ensureAlarming(this)   // switch from reminder back to the loud alarm
     }
 
     private fun confirm(note: String?) {
@@ -125,6 +125,7 @@ class AlarmActivity : AppCompatActivity() {
         if (id != null) {
             Thread {
                 try { Supa.confirmAlert(id, note, Config.SLEEPER_NAME) } catch (_: Exception) {}
+                try { Supa.pushConfirmed(prefs.group, note, Config.SLEEPER_NAME) } catch (_: Exception) {}
             }.start()
         }
 

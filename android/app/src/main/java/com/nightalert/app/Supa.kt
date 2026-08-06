@@ -141,15 +141,22 @@ object Supa {
         }
     }
 
-    /** Ask the server to send the instant wake-up push. Best-effort: silently
-     *  does nothing until the push-alarm function is deployed. */
-    fun pushAlarm(group: String) {
+    /** Ask the server to send the instant wake-up push. Best-effort. */
+    fun pushAlarm(group: String) = callPush(JSONObject().put("group_id", group))
+
+    /** Ask the server to ping the carers that she's checked in. Best-effort. */
+    fun pushConfirmed(group: String, note: String?, by: String) {
+        val body = JSONObject().put("group_id", group).put("type", "confirmed").put("by", by)
+        if (note != null) body.put("note", note)
+        callPush(body)
+    }
+
+    private fun callPush(body: JSONObject) {
         try {
-            val body = JSONObject().put("group_id", group).toString()
             val req = Request.Builder()
                 .url(Config.SUPABASE_URL.trimEnd('/') + "/functions/v1/push-alarm")
                 .auth().header("Content-Type", "application/json")
-                .post(body.toRequestBody(JSON)).build()
+                .post(body.toString().toRequestBody(JSON)).build()
             client.newCall(req).execute().use { }
         } catch (_: Exception) {}
     }

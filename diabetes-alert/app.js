@@ -207,6 +207,15 @@
 
   // Ask the server to send the instant wake-up push. Best-effort.
   function pushAlarm(group) {
+    callPush({ group_id: group });
+  }
+
+  // Ask the server to ping the carers that she's checked in. Best-effort.
+  function pushConfirmed(group, note, by) {
+    callPush({ group_id: group, type: "confirmed", by: by, note: note || undefined });
+  }
+
+  function callPush(body) {
     try {
       fetch(CFG.SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/push-alarm", {
         method: "POST",
@@ -215,7 +224,7 @@
           "apikey": CFG.SUPABASE_ANON_KEY,
           "Authorization": "Bearer " + CFG.SUPABASE_ANON_KEY,
         },
-        body: JSON.stringify({ group_id: group }),
+        body: JSON.stringify(body),
         keepalive: true,
       }).catch(() => {});
     } catch (e) { /* ignore */ }
@@ -492,7 +501,10 @@
     resetAlarmModeUI();
     $("alarm-overlay").hidden = true;
     $("thanks-overlay").hidden = false;
-    if (id) { try { await confirmAlert(id, note); } catch (e) { console.warn(e); } }
+    if (id) {
+      try { await confirmAlert(id, note); } catch (e) { console.warn(e); }
+      pushConfirmed(me.group, note, SLEEPER_NAME);   // ping the carers
+    }
     currentAlarmId = null;
     setTimeout(() => { $("thanks-overlay").hidden = true; }, 4000);
   }

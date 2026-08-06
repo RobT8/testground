@@ -1,15 +1,10 @@
-// ============================================================================
-//  push-alarm — Supabase Edge Function
-//
-//  Called when a carer raises an alert. Looks up the sleeper's phone push
-//  token(s) for the group and sends a HIGH-PRIORITY Firebase Cloud Messaging
-//  data message, which wakes the phone even in deep Doze (unplugged, locked,
-//  asleep) — the one thing polling can't guarantee off-charger.
-//
-//  The Firebase service-account JSON is read from the app_secrets table
-//  (row name 'fcm_service_account'), which only the service role can read.
-//  (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.)
-// ============================================================================
+// push-alarm — Supabase Edge Function.
+// type "alarm" (default): high-priority FCM data message to the group's sleeper
+//   phone(s) to wake them even in deep Doze.
+// type "confirmed": notification ping to the group's carer phone(s) so they hear
+//   the check-in without watching the app.
+// The Firebase service-account JSON is read from the app_secrets table (only the
+// service role can read it). SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are provided.
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -17,7 +12,7 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function json(body: unknown, status = 200) {
+function jsonResp(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...CORS, "Content-Type": "application/json" },
@@ -25,7 +20,7 @@ function json(body: unknown, status = 200) {
 }
 
 function b64url(input: string): string {
-  return btoa(input).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(input).split("+").join("-").split("/").join("_").split("=").join("");
 }
 function b64urlBytes(bytes: Uint8Array): string {
   let s = "";
@@ -33,11 +28,12 @@ function b64urlBytes(bytes: Uint8Array): string {
   return b64url(s);
 }
 
-async function importPrivateKey(pem: string): Promise<CryptoKey> {
-  const der = Uint8Array.from(
-    atob(pem.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "")),
-    (c) => c.charCodeAt(0),
-  );
+async function importKey(pem: string): Promise<CryptoKey> {
+  const compact = pem
+    .split("-----BEGIN PRIVATE KEY-----").join("")
+    .split("-----END PRIVATE KEY-----").join("")
+    .split("\n").join("").split("\r").join("").split(" ").join("");
+  const der = Uint8Array.from(atob(compact), (c) => c.charCodeAt(0));
   return await crypto.subtle.importKey(
     "pkcs8",
     der.buffer,
@@ -59,19 +55,15 @@ async function getAccessToken(sa: any): Promise<string> {
     iat: now,
     exp: now + 3600,
   };
-  const unsigned = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(claim))}`;
-  const key = await importPrivateKey(sa.private_key);
-  const sig = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    new TextEncoder().encode(unsigned),
-  );
-  const jwt = `${unsigned}.${b64urlBytes(new Uint8Array(sig))}`;
+  const unsigned = b64url(JSON.stringify(header)) + "." + b64url(JSON.stringify(claim));
+  const key = await importKey(sa.private_key);
+  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsigned));
+  const jwt = unsigned + "." + b64urlBytes(new Uint8Array(sig));
 
   const res = await fetch(tokenUri, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+    body: "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=" + jwt,
   });
   const data = await res.json();
   if (!data.access_token) throw new Error("token exchange failed: " + JSON.stringify(data));
@@ -80,53 +72,67 @@ async function getAccessToken(sa: any): Promise<string> {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-
   try {
-    const { group_id } = await req.json().catch(() => ({}));
-    if (!group_id) return json({ error: "group_id required" }, 400);
+    const payload = await req.json().catch(() => ({}));
+    const groupId = payload.group_id;
+    const kind = payload.type === "confirmed" ? "confirmed" : "alarm";
+    const role = kind === "confirmed" ? "carer" : "sleeper";
+    if (!groupId) return jsonResp({ error: "group_id required" }, 400);
 
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const base = Deno.env.get("SUPABASE_URL");
+    const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const svcHeaders = { apikey: service, Authorization: "Bearer " + service } as Record<string, string>;
 
-    // The Firebase service-account JSON is kept in the app_secrets table, which
-    // is readable only with the service-role key (bypasses RLS) — never by any
-    // client/publishable key. It is not stored in the repo.
     const secRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/app_secrets?name=eq.fcm_service_account&select=value`,
-      { headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}` } },
+      base + "/rest/v1/app_secrets?name=eq.fcm_service_account&select=value",
+      { headers: svcHeaders },
     );
     const secRows = await secRes.json();
     const saRaw = Array.isArray(secRows) && secRows[0] ? secRows[0].value : null;
-    if (!saRaw) return json({ error: "FCM service account not configured" }, 500);
+    if (!saRaw) return jsonResp({ error: "FCM service account not configured" }, 500);
     const sa = JSON.parse(saRaw);
 
-    // Which phones are the sleepers in this group?
     const devRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/night_alert_devices?group_id=eq.${encodeURIComponent(group_id)}&role=eq.sleeper&select=token`,
-      { headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}` } },
+      base + "/rest/v1/night_alert_devices?group_id=eq." + encodeURIComponent(groupId) +
+        "&role=eq." + role + "&select=token",
+      { headers: svcHeaders },
     );
     const devices = await devRes.json();
     const tokens: string[] = Array.isArray(devices)
       ? devices.map((d: { token: string }) => d.token).filter(Boolean)
       : [];
-    if (tokens.length === 0) return json({ sent: 0, note: "no sleeper devices registered" });
+    if (tokens.length === 0) return jsonResp({ sent: 0, note: "no " + role + " devices" });
 
     const accessToken = await getAccessToken(sa);
-    const endpoint = `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`;
+    const endpoint = "https://fcm.googleapis.com/v1/projects/" + sa.project_id + "/messages:send";
 
     let sent = 0;
     const stale: string[] = [];
     for (const token of tokens) {
-      const msg = {
-        message: {
-          token,
-          data: { type: "alarm", group_id: String(group_id) },
-          android: { priority: "high" },
-        },
-      };
+      let msg;
+      if (kind === "confirmed") {
+        const who = (payload.by && String(payload.by)) || "They";
+        const note = payload.note ? ": " + payload.note : "";
+        msg = {
+          message: {
+            token,
+            notification: { title: who + " has checked in", body: "Confirmed" + note + " — you can rest." },
+            data: { type: "confirmed", group_id: String(groupId) },
+            android: { priority: "high", notification: { sound: "default", channel_id: "confirm" } },
+          },
+        };
+      } else {
+        msg = {
+          message: {
+            token,
+            data: { type: "alarm", group_id: String(groupId) },
+            android: { priority: "high" },
+          },
+        };
+      }
       const r = await fetch(endpoint, {
         method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
         body: JSON.stringify(msg),
       });
       if (r.ok) {
@@ -137,16 +143,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Drop tokens FCM says are dead, so the table stays clean.
     for (const t of stale) {
-      await fetch(
-        `${SUPABASE_URL}/rest/v1/night_alert_devices?token=eq.${encodeURIComponent(t)}`,
-        { method: "DELETE", headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}` } },
-      );
+      await fetch(base + "/rest/v1/night_alert_devices?token=eq." + encodeURIComponent(t), {
+        method: "DELETE",
+        headers: svcHeaders,
+      });
     }
 
-    return json({ sent, stale: stale.length });
+    return jsonResp({ sent, stale: stale.length });
   } catch (e) {
-    return json({ error: String(e) }, 500);
+    return jsonResp({ error: String(e) }, 500);
   }
 });

@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.PowerManager
 import android.os.VibrationEffect
@@ -12,68 +13,67 @@ import android.os.Vibrator
 import android.os.VibratorManager
 
 /**
- * The noise-maker. Plays a looping tone on the ALARM audio stream (sounds even
- * on silent / Do Not Disturb) at forced-maximum volume, plus vibration + wake lock.
+ * The noise-maker, with two modes:
  *
- * It is designed to be RELENTLESS: `ensureAlarming` is idempotent and self-healing,
- * so calling it repeatedly (the watcher does, every few seconds) will restart the
- * sound if it ever stops and re-max the volume if it was turned down — the alarm
- * only truly ends when [stop] is called (on confirm, or a carer's cancel).
+ *  • ALARM  — a looping tone on the ALARM stream at forced-maximum volume (sounds
+ *             even on silent / Do Not Disturb), plus vibration. Relentless and
+ *             self-healing: call ensureAlarming repeatedly and it restarts the
+ *             sound if it ever stops and re-maxes the volume.
+ *  • REMIND — a much quieter gentle double-beep every ~12s, used while she's
+ *             "checking now": enough to remind her to finish confirming, without
+ *             the full siren.
+ *
+ * The sound only truly ends on [stop] (confirm, or a carer's cancel).
  */
 object AlarmPlayer {
+    const val OFF = 0
+    const val ALARM = 1
+    const val REMIND = 2
+
     private var player: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var reminderThread: Thread? = null
     private var previousAlarmVolume = -1
     @Volatile private var vibrating = false
-    @Volatile var isPlaying = false
+
+    @Volatile var mode = OFF
         private set
 
-    /**
-     * Make sure the alarm is sounding loudly, right now. Safe to call repeatedly.
-     * @return true if it had to (re)start the sound this call (it wasn't already
-     *         playing) — the watcher uses this to re-surface the full-screen UI.
-     */
+    /** Kept for existing callers: true whenever any sound mode is active. */
+    val isPlaying: Boolean get() = mode != OFF
+
+    // ---- LOUD alarm ----------------------------------------------------------
     @Synchronized
     fun ensureAlarming(context: Context): Boolean {
         val app = context.applicationContext
-        isPlaying = true
+        acquireWake(app)
 
-        // Hold/refresh a wake lock so the CPU keeps running while ringing.
-        val pm = app.getSystemService(Context.POWER_SERVICE) as PowerManager
-        if (wakeLock == null) {
-            wakeLock = pm.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                "NightAlert:alarm"
-            ).apply { setReferenceCounted(false) }
-        }
-        try { wakeLock?.acquire(15 * 60 * 1000L) } catch (_: Exception) {}
+        // Leaving reminder mode? stop the quiet beeps.
+        if (mode == REMIND) stopReminder()
+        mode = ALARM
 
         // Force alarm volume to maximum every call — defeats a sleepy volume-down.
         val audio = app.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        if (previousAlarmVolume < 0) {
-            previousAlarmVolume = audio.getStreamVolume(AudioManager.STREAM_ALARM)
-        }
+        saveVolume(audio)
         try {
-            val max = audio.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-            audio.setStreamVolume(AudioManager.STREAM_ALARM, max, 0)
+            audio.setStreamVolume(
+                AudioManager.STREAM_ALARM,
+                audio.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0,
+            )
         } catch (_: Exception) {}
 
-        // Keep vibrating.
         if (!vibrating) { startVibration(app); vibrating = true }
 
-        // If the player is alive and actually playing, nothing more to do.
         val alive = try { player != null && player?.isPlaying == true } catch (_: Exception) { false }
         if (alive) return false
 
-        // Otherwise (re)create it.
         try { player?.release() } catch (_: Exception) {}
         player = null
 
         val uri = RingtoneManager.getActualDefaultRingtoneUri(app, RingtoneManager.TYPE_ALARM)
             ?: RingtoneManager.getActualDefaultRingtoneUri(app, RingtoneManager.TYPE_RINGTONE)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-
         try {
             player = MediaPlayer().apply {
                 setAudioAttributes(
@@ -84,35 +84,76 @@ object AlarmPlayer {
                 )
                 setDataSource(app, uri)
                 isLooping = true
-                // On any playback error, drop the player so the next ensure recreates it.
                 setOnErrorListener { _, _, _ ->
                     try { player?.release() } catch (_: Exception) {}
-                    player = null
-                    true
+                    player = null; true
                 }
                 setOnPreparedListener { it.start() }
                 prepareAsync()
             }
-        } catch (_: Exception) {
-            player = null
-        }
+        } catch (_: Exception) { player = null }
         return true
     }
 
     /** Convenience for one-off use (e.g. the "Test the alarm" button). */
     fun start(context: Context) { ensureAlarming(context) }
 
+    // ---- QUIET reminder ------------------------------------------------------
+    @Synchronized
+    fun ensureReminding(context: Context) {
+        val app = context.applicationContext
+        if (mode == REMIND) return
+        acquireWake(app)
+
+        // Drop the loud playback + vibration, keep a soft reminder going.
+        try { player?.stop() } catch (_: Exception) {}
+        try { player?.release() } catch (_: Exception) {}
+        player = null
+        if (vibrating) { try { vibrator?.cancel() } catch (_: Exception) {}; vibrating = false }
+
+        // Moderate the alarm volume so the reminder is quiet but audible.
+        val audio = app.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        saveVolume(audio)
+        try {
+            val max = audio.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            audio.setStreamVolume(AudioManager.STREAM_ALARM, (max * 0.4).toInt().coerceAtLeast(1), 0)
+        } catch (_: Exception) {}
+
+        mode = REMIND
+        startReminder()
+    }
+
+    private fun startReminder() {
+        reminderThread = Thread {
+            var tg: ToneGenerator? = null
+            try { tg = ToneGenerator(AudioManager.STREAM_ALARM, 70) } catch (_: Exception) {}
+            try {
+                while (mode == REMIND) {
+                    try { tg?.startTone(ToneGenerator.TONE_PROP_BEEP2, 250) } catch (_: Exception) {}
+                    Thread.sleep(12_000)
+                }
+            } catch (_: InterruptedException) {
+            } finally {
+                try { tg?.release() } catch (_: Exception) {}
+            }
+        }.also { it.isDaemon = true; it.start() }
+    }
+
+    private fun stopReminder() {
+        reminderThread?.interrupt()
+        reminderThread = null
+    }
+
+    // ---- Stop everything -----------------------------------------------------
     @Synchronized
     fun stop(context: Context) {
-        isPlaying = false
+        mode = OFF
+        stopReminder()
         try { player?.stop() } catch (_: Exception) {}
         try { player?.release() } catch (_: Exception) {}
         player = null
 
-        if (vibrating) {
-            try { vibrator?.cancel() } catch (_: Exception) {}
-            vibrating = false
-        }
+        if (vibrating) { try { vibrator?.cancel() } catch (_: Exception) {}; vibrating = false }
         vibrator = null
 
         if (previousAlarmVolume >= 0) {
@@ -126,6 +167,24 @@ object AlarmPlayer {
 
         try { if (wakeLock?.isHeld == true) wakeLock?.release() } catch (_: Exception) {}
         wakeLock = null
+    }
+
+    // ---- helpers -------------------------------------------------------------
+    private fun saveVolume(audio: AudioManager) {
+        if (previousAlarmVolume < 0) {
+            previousAlarmVolume = audio.getStreamVolume(AudioManager.STREAM_ALARM)
+        }
+    }
+
+    private fun acquireWake(app: Context) {
+        val pm = app.getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (wakeLock == null) {
+            wakeLock = pm.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "NightAlert:alarm"
+            ).apply { setReferenceCounted(false) }
+        }
+        try { wakeLock?.acquire(15 * 60 * 1000L) } catch (_: Exception) {}
     }
 
     private fun startVibration(context: Context) {

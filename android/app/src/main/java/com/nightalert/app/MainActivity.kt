@@ -37,8 +37,19 @@ class MainActivity : AppCompatActivity() {
             show(b.configError)
             return
         }
+        createConfirmChannel()
         wireSetup()
         route()
+    }
+
+    /** Channel for the "she's checked in" ping shown on carers' phones. */
+    private fun createConfirmChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        val ch = android.app.NotificationChannel(
+            "confirm", "Check-in confirmations", android.app.NotificationManager.IMPORTANCE_HIGH
+        ).apply { description = "Tells you when ${Config.SLEEPER_NAME} has checked in." }
+        nm.createNotificationChannel(ch)
     }
 
     // -------------------------------------------------------------------------
@@ -107,6 +118,10 @@ class MainActivity : AppCompatActivity() {
         show(b.carerPanel)
         b.carerWho.text = "${prefs.name} · ${prefs.group}"
         b.btnWake.text = "🔔  Wake ${Config.SLEEPER_NAME} up"
+
+        // Enrol this carer phone for the check-in ping (needs notifications).
+        requestNotificationPermissionIfNeeded()
+        Fcm.registerToken(this)
 
         b.btnWake.setOnClickListener {
             b.btnWake.isEnabled = false

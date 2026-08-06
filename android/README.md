@@ -75,6 +75,10 @@ Send `app-debug.apk` to each phone (email, Google Drive, USB…). On each phone:
 
 **Any carer:**
 - Open the app → **Wake Mum up**. Her phone rings within a few seconds.
+- When she checks in, **your phone gets a notification with a sound** ("Mum has
+  checked in ✅") — so you don't have to sit watching the app. (Needs the app
+  installed and opened once, and notifications allowed. Works even if the app is
+  closed. Web carers don't get the push — only the installed Android app does.)
 
 **Mum:**
 - The screen lights up and rings. She taps **"I've checked — I'm OK"** (or a

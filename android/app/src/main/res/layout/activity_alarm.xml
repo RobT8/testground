@@ -49,14 +49,14 @@
                 android:id="@+id/checking"
                 style="@style/NoteButton"
                 android:layout_marginTop="14dp"
-                android:text="👀  I'm awake — checking now (quiets it)"/>
+                android:text="👀  I'm awake — checking now (softens it)"/>
 
             <TextView
                 android:id="@+id/checkingBanner"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="14dp" android:gravity="center"
                 android:visibility="gone"
-                android:text="Take your time. The alarm will come back in 2 minutes if you don't tap “I've checked”."
+                android:text="A soft reminder will keep sounding until you tap “I've checked”. The full alarm returns in 2 minutes."
                 android:textColor="#FFE4E4" android:textSize="15sp"/>
 
             <TextView
