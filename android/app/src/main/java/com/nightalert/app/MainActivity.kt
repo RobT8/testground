@@ -124,6 +124,13 @@ class MainActivity : AppCompatActivity() {
         requestNotificationPermissionIfNeeded()
         Fcm.registerToken(this)
 
+        // Off-duty toggle: when off, no check-in ping (in-app or push).
+        b.switchPing.isChecked = !prefs.pingMuted
+        b.switchPing.setOnCheckedChangeListener { _, checked ->
+            prefs.pingMuted = !checked
+            Fcm.registerToken(this)   // push the new muted state to the server
+        }
+
         b.btnWake.setOnClickListener {
             b.btnWake.isEnabled = false
             bg({ Supa.raiseAlert(prefs.group, prefs.name) }) {
@@ -164,7 +171,7 @@ class MainActivity : AppCompatActivity() {
                     last.id == carerActiveId && last.id != carerPingedId) {
                     carerPingedId = last.id
                     carerActiveId = null
-                    carerPing()
+                    if (!prefs.pingMuted) carerPing()
                 }
                 // Show the "checked in" banner only for 5 minutes, then go quiet.
                 if (last != null && last.status == "confirmed" && isWithinMinutes(last.confirmedAt, 5)) {

@@ -24,8 +24,9 @@ object Fcm {
                 if (!task.isSuccessful) return@addOnCompleteListener
                 val token = task.result ?: return@addOnCompleteListener
                 Thread {
-                    try { Supa.upsertDevice(prefs.group, token, prefs.role.ifBlank { "sleeper" }) }
-                    catch (_: Exception) {}
+                    try {
+                        Supa.upsertDevice(prefs.group, token, prefs.role.ifBlank { "sleeper" }, prefs.pingMuted)
+                    } catch (_: Exception) {}
                 }.start()
             }
         } catch (_: Exception) {}

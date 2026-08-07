@@ -94,12 +94,16 @@ Deno.serve(async (req) => {
 
     const devRes = await fetch(
       base + "/rest/v1/night_alert_devices?group_id=eq." + encodeURIComponent(groupId) +
-        "&role=eq." + role + "&select=token",
+        "&role=eq." + role + "&select=token,muted",
       { headers: svcHeaders },
     );
     const devices = await devRes.json();
+    // For a confirmation ping, skip carers who have muted (off duty).
     const tokens: string[] = Array.isArray(devices)
-      ? devices.map((d: { token: string }) => d.token).filter(Boolean)
+      ? devices
+          .filter((d: { token: string; muted?: boolean }) => kind === "confirmed" ? !d.muted : true)
+          .map((d: { token: string }) => d.token)
+          .filter(Boolean)
       : [];
     if (tokens.length === 0) return jsonResp({ sent: 0, note: "no " + role + " devices" });
 

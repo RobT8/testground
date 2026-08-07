@@ -24,7 +24,7 @@ class FcmService : FirebaseMessagingService() {
         val prefs = Prefs(this)
         if (prefs.group.isBlank()) return
         Thread {
-            try { Supa.upsertDevice(prefs.group, token, prefs.role.ifBlank { "sleeper" }) }
+            try { Supa.upsertDevice(prefs.group, token, prefs.role.ifBlank { "sleeper" }, prefs.pingMuted) }
             catch (_: Exception) {}
         }.start()
     }
@@ -33,6 +33,7 @@ class FcmService : FirebaseMessagingService() {
         // Carer ping: "she's checked in". (Background delivery is handled by the
         // system tray; this covers the app-in-foreground case.)
         if (message.data["type"] == "confirmed") {
+            if (Prefs(this).pingMuted) return   // this carer is off duty
             val title = message.notification?.title ?: "Checked in ✅"
             val body = message.notification?.body ?: "They've checked in."
             val notif = NotificationCompat.Builder(this, "confirm")

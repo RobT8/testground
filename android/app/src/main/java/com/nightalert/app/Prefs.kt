@@ -46,6 +46,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("battery_asked", false)
         set(v) = sp.edit().putBoolean("battery_asked", v).apply()
 
+    /** Carer: when true, no check-in ping (in-app sound and server push are muted). */
+    var pingMuted: Boolean
+        get() = sp.getBoolean("ping_muted", false)
+        set(v) = sp.edit().putBoolean("ping_muted", v).apply()
+
     val isSetUp: Boolean get() = name.isNotBlank() && group.isNotBlank() && role.isNotBlank()
 
     fun clear() = sp.edit().clear().apply()

@@ -128,9 +128,10 @@ object Supa {
     }
 
     /** Store/refresh a phone's push token (upsert on the token primary key). */
-    fun upsertDevice(group: String, token: String, role: String) {
+    fun upsertDevice(group: String, token: String, role: String, muted: Boolean = false) {
         val body = JSONObject()
-            .put("token", token).put("group_id", group).put("role", role).toString()
+            .put("token", token).put("group_id", group).put("role", role)
+            .put("muted", muted).toString()
         val req = Request.Builder()
             .url(Config.SUPABASE_URL.trimEnd('/') + "/rest/v1/night_alert_devices")
             .auth().header("Content-Type", "application/json")
