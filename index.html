@@ -211,7 +211,7 @@
       <div><b>Revision Compass</b><small id="studentLine">GCSE progress</small></div>
     </div>
     <div class="spacer"></div>
-    <button class="icon-btn" id="editStudent" title="Edit student details" aria-label="Edit student details">✎</button>
+    <button class="btn sm" id="editStudent" title="Edit profile &amp; target grades">Profile</button>
     <button class="icon-btn" id="themeToggle" title="Toggle light / dark" aria-label="Toggle theme">◐</button>
   </div>
   <nav class="tabs" role="tablist">
@@ -382,6 +382,29 @@ function renderDashboard(root) {
     '<p>' + esc(state.student.year) + ' · ' + esc(state.student.season) + ' exams</p>' +
     '</div></div>');
   root.appendChild(head);
+
+  // Profile card — student details + target vs predicted per subject
+  var prof = el('<div class="card pad" style="margin-bottom:20px"></div>');
+  var profHead = el('<div style="display:flex;align-items:center;gap:12px;margin-bottom:2px">' +
+    '<div style="flex:1"><h3 style="font-size:1.05rem">' + esc(state.student.name) + '</h3>' +
+    '<div class="muted" style="font-size:.82rem">' + esc(state.student.year || "—") + ' · ' + esc(state.student.season || "—") + ' exams</div></div></div>');
+  var editProf = el('<button class="btn sm">Edit profile</button>');
+  editProf.addEventListener("click", openStudentModal);
+  profHead.appendChild(editProf);
+  prof.appendChild(profHead);
+  if (state.subjects.length) {
+    var tgrid = el('<div class="grid g-3" style="margin-top:14px"></div>');
+    state.subjects.forEach(function (s) {
+      var pm = subjectMastery(s), pg = predictedGrade(pm);
+      tgrid.appendChild(el('<div style="display:flex;align-items:center;gap:10px;font-size:.86rem">' +
+        '<span style="flex:1">' + esc(s.name) + '</span>' +
+        '<span class="chip grade" title="Target grade">🎯 ' + (s.target ? esc(s.target) : "—") + '</span>' +
+        '<span class="chip ' + band(pm).key + '" title="Currently tracking around">' + pg + '</span></div>'));
+    });
+    prof.appendChild(tgrid);
+    prof.appendChild(el('<p class="hint" style="margin-top:12px">🎯 target grade · coloured chip = grade he\'s tracking around now. Set targets via <b>Edit profile</b>.</p>'));
+  }
+  root.appendChild(prof);
 
   var stats = el('<div class="grid g-3" style="margin-bottom:20px"></div>');
   var b = band(overall);
@@ -790,14 +813,23 @@ function openTestModal(test) {
 
 function openStudentModal() {
   var s = state.student;
+  var targetRows = state.subjects.map(function (sub) {
+    return '<div class="sub-row" style="margin:8px 0"><span class="sn">' + esc(sub.name) + '</span>' +
+      '<input class="tg-input" data-sid="' + sub.id + '" value="' + esc(sub.target) + '" placeholder="—" ' +
+      'style="width:64px;text-align:center" aria-label="Target grade for ' + esc(sub.name) + '"></div>';
+  }).join("");
   var m = el('<div class="modal"><div class="m-body">' +
-    '<h3>Student details</h3>' +
-    '<label class="f"><span>Name</span><input id="stu_name" value="' + esc(s.name) + '"></label>' +
+    '<h3>Profile</h3>' +
+    '<p class="hint" style="margin-top:2px">Who you\'re tracking, and the grade he\'s aiming for in each subject.</p>' +
+    '<label class="f"><span>Student name</span><input id="stu_name" value="' + esc(s.name) + '"></label>' +
     '<div class="row2">' +
       '<label class="f"><span>Year group</span><input id="stu_year" value="' + esc(s.year) + '" placeholder="Year 11"></label>' +
       '<label class="f"><span>Exam season</span><input id="stu_season" value="' + esc(s.season) + '" placeholder="Summer 2026"></label>' +
     '</div>' +
-    '<hr style="border:none;border-top:1px solid var(--line);margin:20px 0 0">' +
+    '<label class="f" style="margin-top:20px"><span>Target grades (9–1)</span></label>' +
+    (state.subjects.length ? '<div style="border:1px solid var(--line);border-radius:10px;padding:8px 12px">' + targetRows + '</div>'
+      : '<p class="muted" style="font-size:.85rem">Add subjects first (Subjects tab), then set their target grades here.</p>') +
+    '<hr style="border:none;border-top:1px solid var(--line);margin:22px 0 0">' +
     '<button class="btn sm ghost del" id="stu_reset" style="margin-top:14px">Reset all data to sample</button>' +
     '<p class="hint">This wipes everything and reloads the sample subjects and tests.</p>' +
     '</div><div class="m-foot"></div></div>');
@@ -814,6 +846,10 @@ function openStudentModal() {
     s.name = m.querySelector("#stu_name").value.trim() || "Student";
     s.year = m.querySelector("#stu_year").value.trim();
     s.season = m.querySelector("#stu_season").value.trim();
+    m.querySelectorAll(".tg-input").forEach(function (inp) {
+      var sub = subjectById(inp.getAttribute("data-sid"));
+      if (sub) sub.target = inp.value.trim();
+    });
     save(); closeModal(); render();
   });
   foot.appendChild(cancel); foot.appendChild(savb);
