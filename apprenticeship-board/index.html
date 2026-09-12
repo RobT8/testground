@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UK Apprenticeship Board</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <h1>🇬🇧 UK Apprenticeship Board</h1>
+      <p class="tagline">Every listing sourced from the official gov.uk apprenticeship service - free, and updated automatically.</p>
+      <p class="updated" id="updated-line">Loading data…</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="stats" id="stats"></section>
+
+    <section class="controls">
+      <input id="search" type="search" placeholder="Search title or employer…" aria-label="Search vacancies">
+      <select id="sector" aria-label="Filter by sector"><option value="">All sectors</option></select>
+      <select id="location" aria-label="Filter by location"><option value="">All locations</option></select>
+      <select id="level" aria-label="Filter by level"><option value="">All levels</option></select>
+      <select id="sort" aria-label="Sort order">
+        <option value="closing">Closing soonest</option>
+        <option value="newest">Start date soonest</option>
+        <option value="wage-desc">Highest wage</option>
+      </select>
+    </section>
+
+    <section id="results" class="results"></section>
+    <p id="empty-state" class="empty-state" hidden>No apprenticeships match those filters. Try widening your search.</p>
+  </main>
+
+  <footer class="site-footer wrap">
+    <p>Data source: the official <a href="https://www.gov.uk/apply-apprenticeship" target="_blank" rel="noopener">Find an apprenticeship</a> service (DfE), via the free <a href="https://developer.apprenticeships.education.gov.uk/" target="_blank" rel="noopener">Display Vacancy Advert API</a>. This board does not scrape commercial job sites, which prohibit it in their terms of service.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "uk-apprenticeship-board",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A free, static UK apprenticeship job board sourced from the official gov.uk Display Vacancy Advert API.",
+  "scripts": {
+    "fetch-data": "node scripts/fetch-data.js",
+    "serve": "npx --yes http-server . -p 8080"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
