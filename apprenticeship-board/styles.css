@@ -138,6 +138,12 @@ body {
   border-radius: 999px;
 }
 
+.tag.source {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
 .card .meta {
   font-size: 13px;
   color: var(--muted);
@@ -178,3 +184,40 @@ body {
 }
 
 .site-footer a { color: var(--accent); }
+
+.employer-links {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  margin-top: 8px;
+}
+
+.employer-links h2 { font-size: 18px; margin-bottom: 4px; }
+
+.section-note {
+  color: var(--muted);
+  font-size: 13px;
+  max-width: 60ch;
+  margin: 0 0 14px;
+}
+
+.employer-link-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.employer-link-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.employer-link-card:hover { border-color: var(--accent); }
+.employer-link-card span { font-size: 13px; color: var(--muted); }

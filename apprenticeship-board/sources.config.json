@@ -1,0 +1,53 @@
+{
+  "_comment": "Configure additional employer sources here. See README.md for the three tiers this maps to. Nothing here is fetched unless fetch-data.js is run with the right connector enabled.",
+
+  "govuk": {
+    "enabled": true
+  },
+
+  "atsConnectors": {
+    "_comment": "TIER 1 - fully sanctioned, documented, free, public APIs built by the ATS vendor for exactly this kind of aggregation. Safe to enable freely.",
+    "greenhouse": [
+      {
+        "employer": "REPLACE_ME - Example Employer Ltd",
+        "boardToken": "REPLACE_ME",
+        "_howToFind": "If a company's careers page URL looks like https://job-boards.greenhouse.io/<boardToken> or https://boards.greenhouse.io/<boardToken>, that's your boardToken.",
+        "enabled": false
+      }
+    ],
+    "lever": [
+      {
+        "employer": "REPLACE_ME - Example Employer Ltd",
+        "company": "REPLACE_ME",
+        "_howToFind": "If a company's careers page URL looks like https://jobs.lever.co/<company>, that's your company slug.",
+        "enabled": false
+      }
+    ]
+  },
+
+  "grayAreaConnectors": {
+    "_comment": "TIER 2 - undocumented endpoints that a company's own careers site calls from the browser (Workday, SuccessFactors, etc.). No vendor sanctions third-party reuse of these; whether it's OK depends on the EMPLOYER's own website terms, not the ATS vendor's. Read the employer's terms of use / robots.txt yourself and set confirmedTermsChecked to true before enabling - fetch-data.js refuses to call these otherwise.",
+    "workday": [
+      {
+        "employer": "Dyson",
+        "hostname": "dyson.wd3.myworkdayjobs.com",
+        "tenant": "dyson",
+        "site": "dyson_careers",
+        "searchText": "apprentice",
+        "confirmedTermsChecked": false,
+        "_note": "Dyson's careers site is Workday-hosted. Check https://careers.dyson.com's terms of use before flipping this on."
+      }
+    ]
+  },
+
+  "directoryLinks": {
+    "_comment": "TIER 3 - employers with no feed at all (custom-built career sites). We don't extract their listings automatically; we just list a link so job-seekers can go look themselves. Shown as a separate 'Company careers pages' section, never mixed into the scraped/fed vacancy list.",
+    "employers": [
+      {
+        "employer": "Dyson",
+        "programme": "Dyson Apprenticeships & Dyson Institute of Engineering and Technology",
+        "url": "https://careers.dyson.com/en-gb/what-you-can-do/early-careers/united-kingdom/"
+      }
+    ]
+  }
+}

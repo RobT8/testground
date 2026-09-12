@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-12T09:00:00Z",
   "source": "sample-data",
-  "note": "Placeholder data shipped so the board works out of the box. Run scripts/fetch-data.js with a free gov.uk API key to replace this with live vacancies.",
+  "note": "Placeholder data shipped so the board works out of the box, including examples of gov.uk-sourced and employer-careers-site-sourced entries. Run scripts/fetch-data.js after configuring sources.config.json to replace this with live vacancies.",
   "vacancies": [
     {
       "id": "SAMPLE-1001",
@@ -16,7 +16,8 @@
       "duration": "18 months",
       "closingDate": "2026-10-15",
       "startDate": "2026-11-03",
-      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship"
+      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship",
+      "source": "Find an apprenticeship (gov.uk) - sample"
     },
     {
       "id": "SAMPLE-1002",
@@ -31,7 +32,8 @@
       "duration": "24 months",
       "closingDate": "2026-09-30",
       "startDate": "2026-10-20",
-      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship"
+      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship",
+      "source": "Find an apprenticeship (gov.uk) - sample"
     },
     {
       "id": "SAMPLE-1003",
@@ -46,7 +48,8 @@
       "duration": "15 months",
       "closingDate": "2026-10-01",
       "startDate": "2026-10-27",
-      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship"
+      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship",
+      "source": "Find an apprenticeship (gov.uk) - sample"
     },
     {
       "id": "SAMPLE-1004",
@@ -61,7 +64,8 @@
       "duration": "12 months",
       "closingDate": "2026-09-25",
       "startDate": "2026-10-13",
-      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship"
+      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship",
+      "source": "Find an apprenticeship (gov.uk) - sample"
     },
     {
       "id": "SAMPLE-1005",
@@ -76,7 +80,8 @@
       "duration": "36 months",
       "closingDate": "2026-11-05",
       "startDate": "2026-12-01",
-      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship"
+      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship",
+      "source": "Find an apprenticeship (gov.uk) - sample"
     },
     {
       "id": "SAMPLE-1006",
@@ -91,7 +96,8 @@
       "duration": "18 months",
       "closingDate": "2026-09-28",
       "startDate": "2026-10-19",
-      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship"
+      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship",
+      "source": "Find an apprenticeship (gov.uk) - sample"
     },
     {
       "id": "SAMPLE-1007",
@@ -106,7 +112,8 @@
       "duration": "15 months",
       "closingDate": "2026-10-10",
       "startDate": "2026-11-02",
-      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship"
+      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship",
+      "source": "Find an apprenticeship (gov.uk) - sample"
     },
     {
       "id": "SAMPLE-1008",
@@ -121,7 +128,8 @@
       "duration": "60 months",
       "closingDate": "2026-11-20",
       "startDate": "2027-09-15",
-      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship"
+      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship",
+      "source": "Find an apprenticeship (gov.uk) - sample"
     },
     {
       "id": "SAMPLE-1009",
@@ -136,7 +144,8 @@
       "duration": "18 months",
       "closingDate": "2026-10-05",
       "startDate": "2026-10-26",
-      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship"
+      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship",
+      "source": "Find an apprenticeship (gov.uk) - sample"
     },
     {
       "id": "SAMPLE-1010",
@@ -151,7 +160,8 @@
       "duration": "18 months",
       "closingDate": "2026-09-22",
       "startDate": "2026-10-06",
-      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship"
+      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship",
+      "source": "Find an apprenticeship (gov.uk) - sample"
     },
     {
       "id": "SAMPLE-1011",
@@ -166,7 +176,8 @@
       "duration": "42 months",
       "closingDate": "2026-11-01",
       "startDate": "2026-09-14",
-      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship"
+      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship",
+      "source": "Find an apprenticeship (gov.uk) - sample"
     },
     {
       "id": "SAMPLE-1012",
@@ -181,7 +192,45 @@
       "duration": "14 months",
       "closingDate": "2026-09-20",
       "startDate": "2026-10-05",
-      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship"
+      "vacancyUrl": "https://www.gov.uk/apply-apprenticeship",
+      "source": "Find an apprenticeship (gov.uk) - sample"
+    },
+    {
+      "id": "SAMPLE-ATS-2001",
+      "source": "Ferrovia Rail Group (careers site) - sample",
+      "title": "Rail Signalling Apprentice",
+      "employerName": "Ferrovia Rail Group (sample)",
+      "sector": "Engineering & Manufacturing",
+      "level": "See listing",
+      "town": "Derby",
+      "postcode": "",
+      "wageUnit": "",
+      "duration": "Not stated",
+      "closingDate": null,
+      "startDate": null,
+      "vacancyUrl": "https://example.com/careers/rail-signalling-apprentice"
+    },
+    {
+      "id": "SAMPLE-ATS-2002",
+      "source": "Cascade Robotics (careers site) - sample",
+      "title": "Robotics Software Apprentice",
+      "employerName": "Cascade Robotics (sample)",
+      "sector": "Digital, IT & Computer Science",
+      "level": "See listing",
+      "town": "Cambridge",
+      "postcode": "",
+      "wageUnit": "",
+      "duration": "Not stated",
+      "closingDate": null,
+      "startDate": null,
+      "vacancyUrl": "https://example.com/careers/robotics-software-apprentice"
+    }
+  ],
+  "employerLinks": [
+    {
+      "employer": "Dyson",
+      "programme": "Dyson Apprenticeships & Dyson Institute of Engineering and Technology",
+      "url": "https://careers.dyson.com/en-gb/what-you-can-do/early-careers/united-kingdom/"
     }
   ]
 }

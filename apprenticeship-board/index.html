@@ -23,6 +23,7 @@
       <select id="sector" aria-label="Filter by sector"><option value="">All sectors</option></select>
       <select id="location" aria-label="Filter by location"><option value="">All locations</option></select>
       <select id="level" aria-label="Filter by level"><option value="">All levels</option></select>
+      <select id="source" aria-label="Filter by source"><option value="">All sources</option></select>
       <select id="sort" aria-label="Sort order">
         <option value="closing">Closing soonest</option>
         <option value="newest">Start date soonest</option>
@@ -32,6 +33,17 @@
 
     <section id="results" class="results"></section>
     <p id="empty-state" class="empty-state" hidden>No apprenticeships match those filters. Try widening your search.</p>
+
+    <section id="employer-links-section" class="employer-links" hidden>
+      <h2>Company careers pages we can't safely aggregate (yet)</h2>
+      <p class="section-note">
+        Some large employers only post apprenticeships on their own custom
+        careers site with no public feed to pull from - so rather than
+        scrape them (which their terms typically disallow), we just link
+        you straight there.
+      </p>
+      <div id="employer-links" class="employer-link-grid"></div>
+    </section>
   </main>
 
   <footer class="site-footer wrap">

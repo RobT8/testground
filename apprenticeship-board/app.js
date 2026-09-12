@@ -16,9 +16,12 @@ const els = {
   sector: document.getElementById('sector'),
   location: document.getElementById('location'),
   level: document.getElementById('level'),
+  source: document.getElementById('source'),
   sort: document.getElementById('sort'),
   results: document.getElementById('results'),
   emptyState: document.getElementById('empty-state'),
+  employerLinksSection: document.getElementById('employer-links-section'),
+  employerLinks: document.getElementById('employer-links'),
 };
 
 async function load() {
@@ -28,6 +31,7 @@ async function load() {
     state.all = data.vacancies || [];
     renderUpdatedLine(data);
     populateFilterOptions(state.all);
+    renderEmployerLinks(data.employerLinks || []);
     applyFilters();
   } catch (err) {
     els.updatedLine.textContent = 'Could not load vacancy data.';
@@ -47,6 +51,21 @@ function populateFilterOptions(vacancies) {
   fillSelect(els.sector, uniqueSorted(vacancies.map(v => v.sector)));
   fillSelect(els.location, uniqueSorted(vacancies.map(v => v.town)));
   fillSelect(els.level, uniqueSorted(vacancies.map(v => v.level)));
+  fillSelect(els.source, uniqueSorted(vacancies.map(v => v.source)));
+}
+
+function renderEmployerLinks(links) {
+  if (!links.length) {
+    els.employerLinksSection.hidden = true;
+    return;
+  }
+  els.employerLinksSection.hidden = false;
+  els.employerLinks.innerHTML = links.map(l => `
+    <a class="employer-link-card" href="${escapeAttr(l.url)}" target="_blank" rel="noopener">
+      <strong>${escapeHtml(l.employer)}</strong>
+      <span>${escapeHtml(l.programme || 'View apprenticeships')}</span>
+    </a>
+  `).join('');
 }
 
 function uniqueSorted(list) {
@@ -71,10 +90,13 @@ function applyFilters() {
   const location = els.location.value;
   const level = els.level.value;
 
+  const source = els.source.value;
+
   let list = state.all.filter(v => {
     if (sector && v.sector !== sector) return false;
     if (location && v.town !== location) return false;
     if (level && v.level !== level) return false;
+    if (source && v.source !== source) return false;
     if (q) {
       const haystack = `${v.title} ${v.employerName}`.toLowerCase();
       if (!haystack.includes(q)) return false;
@@ -153,6 +175,7 @@ function cardHtml(v) {
       <div class="tags">
         <span class="tag">${escapeHtml(v.level)}</span>
         <span class="tag">${escapeHtml(v.sector)}</span>
+        <span class="tag source">${escapeHtml(v.source || 'Unknown source')}</span>
       </div>
       <div class="meta">
         <span>📍 ${escapeHtml(v.town)}${v.postcode ? ' · ' + escapeHtml(v.postcode) : ''}</span>
@@ -175,7 +198,7 @@ function escapeAttr(str) {
   return escapeHtml(str);
 }
 
-[els.search, els.sector, els.location, els.level, els.sort].forEach(el => {
+[els.search, els.sector, els.location, els.level, els.source, els.sort].forEach(el => {
   el.addEventListener('input', applyFilters);
   el.addEventListener('change', applyFilters);
 });
