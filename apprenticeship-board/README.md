@@ -39,9 +39,64 @@ everything:
 
 | Tier | Examples | How it's fetched | Enabled by default? |
 |---|---|---|---|
-| 1 — sanctioned API | gov.uk, Greenhouse, Lever | Documented public endpoints | gov.uk: yes (with a key). ATS: per employer, in `sources.config.json` |
-| 2 — gray area | Dyson (Workday) | Same JSON the browser calls; undocumented for 3rd parties | **No** — off until you set `confirmedTermsChecked: true` after reading that employer's own terms yourself |
-| 3 — no feed at all | Any custom career site with nothing above | Not fetched — just linked | Always shown as a plain link-out card, never merged into the vacancy list |
+| 1 — sanctioned API | gov.uk, Greenhouse, Lever, Workable, SmartRecruiters | Documented public endpoints | gov.uk: yes (with a key). ATS: per employer, in `sources.config.json` |
+| 2 — gray area | Dyson, Rolls-Royce, Lloyds Banking Group (all Workday) | Same JSON the browser calls; undocumented for 3rd parties | **No** — off until you set `confirmedTermsChecked: true` after reading that employer's own terms yourself |
+| 3 — no feed at all | Jaguar Land Rover (SuccessFactors), National Grid | Not fetched — just linked | Always shown as a plain link-out card, never merged into the vacancy list |
+
+### So how many big employers can we actually just switch on?
+
+I checked several flagship UK apprenticeship employers directly (fetching
+their real endpoints, not guessing) and the honest answer is: **fewer than
+you'd hope, among the household names** — and it's worth knowing why before
+you go looking for more.
+
+| Employer | Platform found | Tier |
+|---|---|---|
+| Dyson | Workday | 2 (gray area) |
+| Rolls-Royce | Workday — verified live, returned a real posting | 2 (gray area) |
+| Lloyds Banking Group | Workday — verified live, endpoint healthy (0 open right now; window opens in Nov) | 2 (gray area) |
+| Jaguar Land Rover | SAP SuccessFactors | 3 (no connector built yet) |
+| National Grid | Beamery (talent CRM) + unconfirmed ATS | 3 |
+| BAE Systems | Not identified from public info | 3 (unconfirmed) |
+| BT Group | Not identified from public info | 3 (unconfirmed) |
+
+The pattern: **Greenhouse/Lever/Workable/SmartRecruiters (Tier 1, no
+permission needed) skew towards tech and scale-up employers.** The
+traditional big apprenticeship providers — aerospace, banking, utilities,
+manufacturing — run enterprise ATS platforms (Workday, SuccessFactors,
+Avature, Beamery) built for large-company HR, and none of those vendors
+publish a sanctioned public read API. So for exactly the employers people
+usually mean by "one-stop shop" (Rolls-Royce, BAE, Lloyds, JLR, National
+Grid...), Tier 2/3 is where they'll actually land, not Tier 1.
+
+I also learned something else useful while checking: these employers'
+*marketing* careers pages (careers.company.com) sit behind bot-protection
+that flat-out blocks a plain server-side fetch (403, even with a browser
+User-Agent) — but the underlying ATS itself, once you know its actual
+address (e.g. `rollsroyce.wd3.myworkdayjobs.com`), isn't protected the same
+way and answers normally. That's why `scripts/detect-platform.js` below
+needs the *actual application URL*, not the homepage.
+
+### Growing this list: `scripts/detect-platform.js`
+
+Rather than me guessing employer-by-employer via search, tell me (or run
+yourself) the actual apply-page URL you land on after clicking "Apply" on
+an employer's site (or grab it from your browser's Network tab), and this
+identifies the platform and tier without extracting any vacancy content —
+it only reads page markup to spot which ATS it's built on:
+
+```bash
+node scripts/detect-platform.js "https://rollsroyce.wd3.myworkdayjobs.com/Apprentice"
+# -> Tier 2: Workday (check that employer's own site terms before enabling)
+
+node scripts/detect-platform.js --file employers.txt   # one URL per line
+```
+
+Give me a list of named employers you want on the board and I'll run this
+against each and tell you what tier they land in — Tier 1 hits get wired
+up immediately; Tier 2 hits I'll hand back to you to greenlight per
+employer, since that's a real legal judgment call about their specific
+site terms, not one I can make on your behalf at scale.
 
 ## How it works
 
@@ -95,13 +150,14 @@ immediately with no setup.
    named `APPRENTICESHIP_API_KEY` (Settings → Secrets and variables →
    Actions) — the included workflow will pick it up.
 
-### Adding a big employer that uses Greenhouse or Lever (Tier 1)
+### Adding a big employer on a Tier 1 platform (Greenhouse, Lever, Workable, SmartRecruiters)
 
-1. Find their careers page URL. `job-boards.greenhouse.io/<token>` or
-   `boards.greenhouse.io/<token>` → Greenhouse; `jobs.lever.co/<company>` →
-   Lever.
-2. Add an entry under `atsConnectors.greenhouse` or `atsConnectors.lever`
-   in `sources.config.json` with `"enabled": true`.
+1. Find their careers page URL and match it against: `job-boards.greenhouse.io/<token>`
+   or `boards.greenhouse.io/<token>` → Greenhouse; `jobs.lever.co/<company>`
+   → Lever; `apply.workable.com/<accountSlug>` → Workable;
+   `jobs.smartrecruiters.com/<companyId>` → SmartRecruiters.
+2. Add an entry under the matching array in `atsConnectors` in
+   `sources.config.json` with `"enabled": true`.
 3. Re-run `node scripts/fetch-data.js` — postings whose title/description
    mentions "apprentice" are pulled in automatically, tagged with that
    employer's name as the `source`.

@@ -6,10 +6,16 @@
  * NEVER throws past its own boundary - a broken/rate-limited source should
  * not take down the whole fetch run, it should just log and return [].
  *
- * TIER 1 - govukVacancies(), greenhouseVacancies(), leverVacancies():
+ * TIER 1 - govukVacancies(), greenhouseVacancies(), leverVacancies(),
+ * workableVacancies(), smartRecruitersVacancies():
  *   Official, documented, public APIs meant for third-party aggregation.
  *   Free to use, no special permission needed beyond (for gov.uk) a free
- *   API key sign-up.
+ *   API key sign-up. NOTE: in practice, large "flagship" UK apprenticeship
+ *   employers (aerospace, banking, utilities, manufacturing) tend to run
+ *   enterprise ATS platforms (Workday, SuccessFactors, Avature, Beamery -
+ *   all Tier 2) rather than these vendors, which skew towards tech/scale-up
+ *   employers. Keep these connectors ready regardless - they cost nothing
+ *   to have enabled, and pick up whichever employers do use them.
  *
  * TIER 2 - workdayVacancies():
  *   Calls the same JSON endpoint a Workday-hosted careers site's own search
@@ -176,6 +182,82 @@ async function leverVacancies({ employer, company }) {
 }
 
 // ---------------------------------------------------------------------------
+// TIER 1: Workable public job board widget API
+// Docs: https://help.workable.com/hc/en-us/articles/115012771647 - built by
+// Workable specifically to power embeddable/external career pages. No auth.
+// ---------------------------------------------------------------------------
+async function workableVacancies({ employer, accountSlug }) {
+  if (!accountSlug || accountSlug === 'REPLACE_ME') return [];
+
+  try {
+    const url = `https://apply.workable.com/api/v1/widget/accounts/${encodeURIComponent(accountSlug)}?details=true`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const data = await res.json();
+    const jobs = (data.jobs || []).filter(j => APPRENTICE_WORDS.test(j.title || '') || APPRENTICE_WORDS.test(j.description || ''));
+
+    console.log(`[workable:${employer}] Fetched ${jobs.length} apprenticeship postings.`);
+    return jobs.map(j => ({
+      id: `workable-${j.shortcode || j.id}`,
+      source: `${employer} (careers site)`,
+      title: j.title,
+      employerName: employer,
+      sector: j.department || 'Uncategorised',
+      level: 'See listing',
+      town: [j.city, j.country].filter(Boolean).join(', ') || 'Location not stated',
+      postcode: '',
+      wageAmount: undefined,
+      wageUnit: '',
+      duration: 'Not stated',
+      closingDate: null,
+      startDate: null,
+      vacancyUrl: j.url || j.application_url,
+    }));
+  } catch (err) {
+    console.error(`[workable:${employer}] Failed: ${err.message}`);
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TIER 1: SmartRecruiters public Posting API
+// Docs: https://developers.smartrecruiters.com/docs/posting-api - built for
+// external job boards; no auth needed when the customer has it enabled.
+// ---------------------------------------------------------------------------
+async function smartRecruitersVacancies({ employer, companyId }) {
+  if (!companyId || companyId === 'REPLACE_ME') return [];
+
+  try {
+    const url = `https://api.smartrecruiters.com/v1/companies/${encodeURIComponent(companyId)}/postings`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const data = await res.json();
+    const postings = (data.content || []).filter(p => APPRENTICE_WORDS.test(p.name || ''));
+
+    console.log(`[smartrecruiters:${employer}] Fetched ${postings.length} apprenticeship postings.`);
+    return postings.map(p => ({
+      id: `smartrecruiters-${p.id}`,
+      source: `${employer} (careers site)`,
+      title: p.name,
+      employerName: employer,
+      sector: p.department?.label || 'Uncategorised',
+      level: 'See listing',
+      town: p.location?.city || 'Location not stated',
+      postcode: p.location?.postalCode || '',
+      wageAmount: undefined,
+      wageUnit: '',
+      duration: 'Not stated',
+      closingDate: null,
+      startDate: null,
+      vacancyUrl: p.ref || `https://jobs.smartrecruiters.com/${companyId}/${p.id}`,
+    }));
+  } catch (err) {
+    console.error(`[smartrecruiters:${employer}] Failed: ${err.message}`);
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
 // TIER 2 (gray area, opt-in only): Workday-hosted careers sites.
 // Calls the same POST endpoint the site's own search UI uses. Kept to a
 // single request (no pagination loop) to stay low-volume.
@@ -224,5 +306,7 @@ module.exports = {
   govukVacancies,
   greenhouseVacancies,
   leverVacancies,
+  workableVacancies,
+  smartRecruitersVacancies,
   workdayVacancies,
 };

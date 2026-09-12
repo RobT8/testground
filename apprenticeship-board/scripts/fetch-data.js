@@ -37,6 +37,8 @@ const {
   govukVacancies,
   greenhouseVacancies,
   leverVacancies,
+  workableVacancies,
+  smartRecruitersVacancies,
   workdayVacancies,
 } = require('./connectors');
 
@@ -63,6 +65,14 @@ async function main() {
 
   for (const lv of config.atsConnectors?.lever || []) {
     if (lv.enabled) results.push(...await leverVacancies(lv));
+  }
+
+  for (const wk of config.atsConnectors?.workable || []) {
+    if (wk.enabled) results.push(...await workableVacancies(wk));
+  }
+
+  for (const sr of config.atsConnectors?.smartrecruiters || []) {
+    if (sr.enabled) results.push(...await smartRecruitersVacancies(sr));
   }
 
   for (const wd of config.grayAreaConnectors?.workday || []) {

@@ -22,6 +22,22 @@
         "_howToFind": "If a company's careers page URL looks like https://jobs.lever.co/<company>, that's your company slug.",
         "enabled": false
       }
+    ],
+    "workable": [
+      {
+        "employer": "REPLACE_ME - Example Employer Ltd",
+        "accountSlug": "REPLACE_ME",
+        "_howToFind": "If a company's careers page URL looks like https://apply.workable.com/<accountSlug>/, that's your slug.",
+        "enabled": false
+      }
+    ],
+    "smartrecruiters": [
+      {
+        "employer": "REPLACE_ME - Example Employer Ltd",
+        "companyId": "REPLACE_ME",
+        "_howToFind": "If a company's careers page URL looks like https://jobs.smartrecruiters.com/<companyId>/, that's your companyId.",
+        "enabled": false
+      }
     ]
   },
 
@@ -35,7 +51,25 @@
         "site": "dyson_careers",
         "searchText": "apprentice",
         "confirmedTermsChecked": false,
-        "_note": "Dyson's careers site is Workday-hosted. Check https://careers.dyson.com's terms of use before flipping this on."
+        "_note": "Verified live and reachable. Check https://careers.dyson.com's terms of use before flipping this on."
+      },
+      {
+        "employer": "Rolls-Royce",
+        "hostname": "rollsroyce.wd3.myworkdayjobs.com",
+        "tenant": "rollsroyce",
+        "site": "Apprentice",
+        "searchText": "",
+        "confirmedTermsChecked": false,
+        "_note": "Verified live and reachable (returned real apprenticeship postings while building this). Check https://careers.rolls-royce.com's terms of use before flipping this on."
+      },
+      {
+        "employer": "Lloyds Banking Group",
+        "hostname": "lbg.wd3.myworkdayjobs.com",
+        "tenant": "lbg",
+        "site": "LBG_HigherApprenticeCareers",
+        "searchText": "",
+        "confirmedTermsChecked": false,
+        "_note": "Verified live and reachable (0 postings when checked - their apprenticeship window opens Nov 3). Check https://www.lloydsbankinggrouptalent.com's terms of use before flipping this on."
       }
     ]
   },
@@ -47,6 +81,18 @@
         "employer": "Dyson",
         "programme": "Dyson Apprenticeships & Dyson Institute of Engineering and Technology",
         "url": "https://careers.dyson.com/en-gb/what-you-can-do/early-careers/united-kingdom/"
+      },
+      {
+        "employer": "Jaguar Land Rover (JLR)",
+        "programme": "JLR Apprenticeships",
+        "url": "https://careers.jaguarlandrover.com/early-careers/apprentices",
+        "_note": "Runs SAP SuccessFactors - no connector built yet (unverified). Could move to Tier 2 if someone builds/verifies a SuccessFactors connector."
+      },
+      {
+        "employer": "National Grid",
+        "programme": "National Grid Apprenticeships",
+        "url": "https://careers.nationalgrid.com/new-talent/apprentices",
+        "_note": "Uses Beamery for talent-community signup; underlying ATS for live vacancies unconfirmed."
       }
     ]
   }
