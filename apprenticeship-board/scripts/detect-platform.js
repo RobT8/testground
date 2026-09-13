@@ -16,9 +16,9 @@
  *
  *   TIER 3 (nothing detected - add as a plain directory link instead)
  *
- * This is how the board's employer coverage grows over time: run this
- * against every employer you want to add, then wire up whatever it finds
- * in sources.config.json.
+ * For checking a whole list of employers at once and having Tier 1/2 hits
+ * wired into sources.config.json automatically, use bulk-add-employers.js
+ * instead - this script is for a single ad-hoc check.
  *
  * IMPORTANT LIMITATION, found while building this: most big employers' own
  * *marketing* careers pages (careers.company.com) sit behind bot-protection
@@ -39,37 +39,7 @@
  * ---------------------------------------------------------------------------
  */
 
-const SIGNATURES = [
-  { platform: 'Greenhouse', tier: 1, pattern: /greenhouse\.io|job-boards\.greenhouse/i },
-  { platform: 'Lever', tier: 1, pattern: /jobs\.lever\.co/i },
-  { platform: 'Workable', tier: 1, pattern: /apply\.workable\.com|\.workable\.com/i },
-  { platform: 'SmartRecruiters', tier: 1, pattern: /smartrecruiters\.com/i },
-  { platform: 'Workday', tier: 2, pattern: /myworkdayjobs\.com/i },
-  { platform: 'SuccessFactors', tier: 2, pattern: /sapsf\.(eu|com)|successfactors/i },
-  { platform: 'Avature', tier: 2, pattern: /avature\.net/i },
-  { platform: 'Beamery', tier: 2, pattern: /beamery\.com/i },
-  { platform: 'Eightfold', tier: 2, pattern: /eightfold\.ai/i },
-  { platform: 'Taleo', tier: 2, pattern: /taleo\.net/i },
-  { platform: 'iCIMS', tier: 2, pattern: /icims\.com/i },
-];
-
-async function detect(url) {
-  try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'apprenticeship-board-detector/1.0 (+read-only, single page)' } });
-    if (!res.ok) return { url, error: `${res.status} ${res.statusText}` };
-    const html = await res.text();
-
-    const hits = SIGNATURES.filter(s => s.pattern.test(html));
-    if (!hits.length) return { url, tier: 3, platform: null, note: 'No known ATS signature found - add as a Tier 3 directory link.' };
-
-    // Report every match (a page can reference more than one platform e.g. a
-    // talent-CRM plus an ATS) but lead with the lowest tier number found.
-    hits.sort((a, b) => a.tier - b.tier);
-    return { url, tier: hits[0].tier, platform: hits.map(h => h.platform).join(' + ') };
-  } catch (err) {
-    return { url, error: err.message };
-  }
-}
+const { classifyUrl } = require('./ats-signatures');
 
 async function main() {
   const args = process.argv.slice(2);
@@ -88,11 +58,11 @@ async function main() {
   }
 
   for (const url of urls) {
-    const result = await detect(url);
+    const result = await classifyUrl(url);
     if (result.error) {
       console.log(`${url}\n  -> could not check (${result.error})\n`);
     } else if (result.tier === 3) {
-      console.log(`${url}\n  -> Tier 3: no known ATS found. ${result.note}\n`);
+      console.log(`${url}\n  -> Tier 3: no known ATS found. Add as a Tier 3 directory link.\n`);
     } else {
       console.log(`${url}\n  -> Tier ${result.tier}: ${result.platform}${result.tier === 1 ? ' (safe to enable now in sources.config.json)' : ' (check that employer\'s own site terms before enabling)'}\n`);
     }

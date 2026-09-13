@@ -77,26 +77,57 @@ address (e.g. `rollsroyce.wd3.myworkdayjobs.com`), isn't protected the same
 way and answers normally. That's why `scripts/detect-platform.js` below
 needs the *actual application URL*, not the homepage.
 
-### Growing this list: `scripts/detect-platform.js`
+### Growing this list one employer: `scripts/detect-platform.js`
 
-Rather than me guessing employer-by-employer via search, tell me (or run
-yourself) the actual apply-page URL you land on after clicking "Apply" on
-an employer's site (or grab it from your browser's Network tab), and this
-identifies the platform and tier without extracting any vacancy content —
-it only reads page markup to spot which ATS it's built on:
+Tell me (or run yourself) the actual apply-page URL you land on after
+clicking "Apply" on an employer's site (or grab it from your browser's
+Network tab — the marketing homepage itself is usually bot-protected and
+won't work here), and this identifies the platform and tier without
+extracting any vacancy content — it recognizes the ATS from the URL's own
+hostname, no page fetch needed for the well-known ones:
 
 ```bash
 node scripts/detect-platform.js "https://rollsroyce.wd3.myworkdayjobs.com/Apprentice"
 # -> Tier 2: Workday (check that employer's own site terms before enabling)
-
-node scripts/detect-platform.js --file employers.txt   # one URL per line
 ```
 
-Give me a list of named employers you want on the board and I'll run this
-against each and tell you what tier they land in — Tier 1 hits get wired
-up immediately; Tier 2 hits I'll hand back to you to greenlight per
-employer, since that's a real legal judgment call about their specific
-site terms, not one I can make on your behalf at scale.
+### Bulk-importing a whole list: `scripts/bulk-add-employers.js`
+
+Have a list of employer URLs already? Put one per line in a text file —
+name and URL, separated by a comma/tab/pipe (name is optional, falls back
+to the hostname), `#` for comments:
+
+```
+Dyson, https://dyson.wd3.myworkdayjobs.com/dyson_careers
+Rolls-Royce, https://rollsroyce.wd3.myworkdayjobs.com/Apprentice
+https://boards.greenhouse.io/somecompany
+```
+
+Then run:
+
+```bash
+node scripts/bulk-add-employers.js employers.txt --dry-run   # preview first
+node scripts/bulk-add-employers.js employers.txt             # writes sources.config.json
+```
+
+For every line it classifies the platform and **writes the right thing
+into `sources.config.json` automatically**:
+
+- **Tier 1** (Greenhouse/Lever/Workable/SmartRecruiters) → enabled
+  immediately. These are sanctioned, no permission needed.
+- **Tier 2 with a connector** (currently Workday) → added but **left
+  disabled** (`confirmedTermsChecked: false`). It won't be fetched until a
+  human reads that employer's own site terms and flips the flag by hand —
+  the bulk tool deliberately never does that step for you, however many
+  employers are in the list.
+- **Tier 2 without a connector yet, or Tier 3, or blocked/unreachable** →
+  added as a plain directory link with a note explaining why, so nothing
+  silently disappears from the list.
+
+It's safe to re-run on the same file — anything already configured is
+left untouched, not duplicated. If you'd rather I run it, paste your list
+in the chat (or attach the file) and I'll run it and report back what each
+one classified as.
 
 ## How it works
 
