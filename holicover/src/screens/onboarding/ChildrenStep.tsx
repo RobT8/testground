@@ -39,8 +39,8 @@ export default function ChildrenStep({ onNext }: ChildrenStepProps) {
     return updated;
   }
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  /** Save whatever is typed in the form. Shared by the add button and Next. */
+  async function commitPending() {
     const trimmed = name.trim();
     if (!trimmed) return;
 
@@ -54,6 +54,21 @@ export default function ChildrenStep({ onNext }: ChildrenStepProps) {
     const updated = await refresh();
     setName('');
     setColour(nextFreeColour(updated));
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    await commitPending();
+  }
+
+  /**
+   * A name typed but not yet added is intent to include that child. Next sits
+   * outside the add form, so without this it would be discarded in silence and
+   * the child would simply never appear.
+   */
+  async function handleNext() {
+    await commitPending();
+    onNext();
   }
 
   function startEditing(child: Child) {
@@ -154,8 +169,8 @@ export default function ChildrenStep({ onNext }: ChildrenStepProps) {
       <button
         type="button"
         className="button button--primary"
-        disabled={children.length === 0}
-        onClick={onNext}
+        disabled={children.length === 0 && !name.trim()}
+        onClick={handleNext}
       >
         Next
       </button>

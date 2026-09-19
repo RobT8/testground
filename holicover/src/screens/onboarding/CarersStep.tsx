@@ -53,8 +53,8 @@ export default function CarersStep({ onDone, busy }: CarersStepProps) {
     await refresh();
   }
 
-  async function addCustom(event: React.FormEvent) {
-    event.preventDefault();
+  /** Save a typed custom carer. Shared by the add button and the final button. */
+  async function commitCustom() {
     const trimmed = customName.trim();
     if (!trimmed) return;
 
@@ -68,6 +68,20 @@ export default function CarersStep({ onDone, busy }: CarersStepProps) {
     setCustomName('');
     setCustomType('other');
     setShowCustom(false);
+  }
+
+  async function addCustom(event: React.FormEvent) {
+    event.preventDefault();
+    await commitCustom();
+  }
+
+  /**
+   * Same trap as the children step: a half-typed custom carer would otherwise
+   * be discarded in silence when the user taps the button that finishes setup.
+   */
+  async function handleDone() {
+    await commitCustom();
+    onDone();
   }
 
   /** Carers the user typed in, as opposed to the presets shown as chips. */
@@ -185,8 +199,8 @@ export default function CarersStep({ onDone, busy }: CarersStepProps) {
       <button
         type="button"
         className="button button--primary"
-        disabled={carers.length === 0 || busy}
-        onClick={onDone}
+        disabled={(carers.length === 0 && !customName.trim()) || busy}
+        onClick={handleDone}
       >
         {busy ? 'Setting up…' : 'Start planning'}
       </button>
