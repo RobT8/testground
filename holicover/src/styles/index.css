@@ -1,0 +1,185 @@
+/* HoliCover global styles — design tokens and base layout.
+   Colours come from the project brief; every colour is a custom property so
+   light/dark/system theming is a single data-theme swap on <html>. */
+
+:root {
+  --bg: #F5F3EE;
+  --card: #FFFFFF;
+  --border: #E5E3DE;
+  --text: #1A1A1A;
+  --text2: #6B6A66;
+  --text3: #9C9A92;
+  --accent: #185FA5;
+  --accent-bg: #E6F1FB;
+  --green: #97C459;
+  --red: #F09595;
+  --red-text: #A32D2D;
+
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 24px;
+
+  /* Carer type swatches — background / text pairs used by the weekly grid */
+  --carer-family-bg: #E1F5EE;
+  --carer-family-text: #085041;
+  --carer-club-bg: #EEEDFE;
+  --carer-club-text: #3C3489;
+  --carer-parent-bg: #FAEEDA;
+  --carer-parent-text: #633806;
+  --carer-playdate-bg: #FBEAF0;
+  --carer-playdate-text: #72243E;
+  --carer-other-bg: #F1EFE8;
+  --carer-other-text: #444441;
+  --carer-gap-bg: #FCEBEB;
+  --carer-gap-text: #791F1F;
+}
+
+/* Dark palette. `data-theme` on <html> is always a RESOLVED theme — utils/theme.ts
+   turns the user's "system" preference into 'light' or 'dark' and keeps it in sync
+   with the OS — so this one block covers both explicit-dark and system-dark. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #1A1A1A;
+  --card: #242422;
+  --border: #3A3A38;
+  --text: #E8E6DE;
+  --text2: #9C9A92;
+  --text3: #6B6A66;
+  --accent: #85B7EB;
+  --accent-bg: #0C447C;
+
+  --carer-family-bg: #085041;
+  --carer-family-text: #9FE1CB;
+  --carer-club-bg: #3C3489;
+  --carer-club-text: #CECBF6;
+  --carer-parent-bg: #633806;
+  --carer-parent-text: #FAC775;
+  --carer-playdate-bg: #72243E;
+  --carer-playdate-text: #F4C0D1;
+  --carer-other-bg: #444441;
+  --carer-other-text: #D3D1C7;
+  --carer-gap-bg: #501313;
+  --carer-gap-text: #F7C1C1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  /* Honour the Android status bar / gesture bar. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* No text selection or tap highlight — this should feel native, not web. */
+body {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* App shell: scrollable screen area above a fixed bottom nav. */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--bg);
+}
+
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.screen--with-nav {
+  padding-bottom: 16px;
+}
+
+/* Cards — flat, 0.5px borders, no shadows. */
+.card {
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.page-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin: 0 0 2px;
+}
+
+.placeholder-note {
+  color: var(--text2);
+  font-size: 13px;
+}
+
+/* Bottom navigation — 4 items, icon over label, flat. */
+.bottom-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 0.5px solid var(--border);
+  background: var(--card);
+}
+
+.bottom-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 0 12px;
+  text-decoration: none;
+  color: var(--text3);
+}
+
+.bottom-nav__item--active {
+  color: var(--accent);
+}
+
+.bottom-nav__icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.bottom-nav__label {
+  font-size: 11px;
+}
