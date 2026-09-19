@@ -86,7 +86,7 @@ theme to `data-theme` on `<html>`, keeping it in sync if the OS setting changes.
 - [x] 2. Database layer — SQLite init, migrations, CRUD
 - [x] 3. Onboarding — welcome slides, add children, add carers
 - [x] 4. Home screen — holiday list, progress bars, stat cards
-- [ ] 5. Weekly planner — week grid, navigation, gap detection
+- [x] 5. Weekly planner — week grid, navigation, gap detection
 - [ ] 6. Day assignment — carer picker, slot assignment, repeat logic
 - [ ] 7. Children & Carers screens — full CRUD
 - [ ] 8. Settings — theme, backup/restore, delete all data

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HashRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { HashRouter, Navigate, Outlet, Route, Routes, matchPath, useLocation } from 'react-router-dom';
 import BottomNav from './components/BottomNav';
 import { useDatabase } from './hooks/useDatabase';
 import OnboardingScreen from './screens/OnboardingScreen';
@@ -10,12 +10,16 @@ import ChildrenScreen from './screens/ChildrenScreen';
 import CarersScreen from './screens/CarersScreen';
 import SettingsScreen from './screens/SettingsScreen';
 
-/** Routes that sit behind the bottom navigation bar. */
-const NAV_ROUTES = ['/', '/children', '/carers', '/settings'];
+/**
+ * Routes that sit behind the bottom navigation bar. The weekly planner keeps
+ * it; the day assignment screen below it does not, so that screen is a focused
+ * task the back arrow returns from.
+ */
+const NAV_PATTERNS = ['/', '/children', '/carers', '/settings', '/holiday/:holidayId'];
 
 function AppShell() {
   const { pathname } = useLocation();
-  const showNav = NAV_ROUTES.includes(pathname);
+  const showNav = NAV_PATTERNS.some((pattern) => matchPath({ path: pattern, end: true }, pathname));
 
   return (
     <div className="app-shell">
