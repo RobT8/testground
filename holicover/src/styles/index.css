@@ -183,3 +183,9 @@ button {
 .bottom-nav__label {
   font-size: 11px;
 }
+
+.screen--centred {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

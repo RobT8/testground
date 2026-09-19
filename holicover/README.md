@@ -23,7 +23,15 @@ gaps are obvious at a glance.
 ```bash
 npm install
 npm run dev            # web dev server, fastest loop for UI work
+npm test               # data-layer tests
+npm run lint
 ```
+
+In the browser the database runs on jeep-sqlite (SQLite compiled to wasm),
+stored in IndexedDB. On Android the native plugin is used instead and none of
+that code loads. `sql.js` is pinned to an exact version because jeep-sqlite
+inlines its own copy of the sql.js glue and a newer wasm fails to link against
+it — see the comment in `vite.config.ts` before bumping it.
 
 ## Running on Android
 
@@ -48,6 +56,23 @@ src/
 └── styles/      Global CSS and design tokens
 ```
 
+## Data layer
+
+`src/db/` is plain SQL behind a small `DbExecutor` interface, so the same code
+runs three ways: the Capacitor plugin on Android, jeep-sqlite in the browser,
+and Node's built-in SQLite under test. Tests therefore exercise the real
+schema and the real queries.
+
+Migrations live in `src/db/schema.ts` and are tracked with SQLite's
+`user_version`. A shipped migration is never edited — add a new one to the end
+of the array instead.
+
+Assignments carry two shapes in one table: simple-mode rows set `period`
+('am' / 'pm' / 'all_day') and leave the times null, while detailed-mode rows
+set `start_time`/`end_time` and leave `period` null. A partial unique index
+enforces one carer per simple-mode slot without restricting how many time
+slots a detailed day can hold.
+
 ## Theming
 
 All colours are CSS custom properties in `src/styles/index.css`. The user's
@@ -58,7 +83,7 @@ theme to `data-theme` on `<html>`, keeping it in sync if the OS setting changes.
 ## Build progress
 
 - [x] 1. Project scaffold — Vite + React + Capacitor + Android platform
-- [ ] 2. Database layer — SQLite init, migrations, CRUD
+- [x] 2. Database layer — SQLite init, migrations, CRUD
 - [ ] 3. Onboarding — welcome slides, add children, add carers
 - [ ] 4. Home screen — holiday list, progress bars, stat cards
 - [ ] 5. Weekly planner — week grid, navigation, gap detection
