@@ -66,6 +66,21 @@ export const MIGRATIONS: string[] = [
     ON assignments(holiday_id, child_id, date, period)
     WHERE period IS NOT NULL;
   `,
+
+  // v2 — notes that belong to a day rather than to one carer's slot.
+  //
+  // The assignments table has its own notes column, but a note like "pack
+  // swimming kit" describes the day: storing it per assignment would duplicate
+  // it across every slot and lose it entirely on a day with no cover booked.
+  `
+  CREATE TABLE IF NOT EXISTS day_notes (
+    holiday_id INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    note TEXT NOT NULL,
+    PRIMARY KEY (holiday_id, date),
+    FOREIGN KEY (holiday_id) REFERENCES holidays(id) ON DELETE CASCADE
+  );
+  `,
 ];
 
 /** Schema version this build of the app expects. */

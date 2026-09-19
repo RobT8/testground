@@ -228,20 +228,6 @@ export async function copyDay(
   );
 }
 
-/** Set the shared note for a day (e.g. "pack swimming kit"). */
-export async function setDayNotes(
-  holidayId: number,
-  date: string,
-  notes: string | null,
-): Promise<void> {
-  const db = await getDb();
-  await db.run('UPDATE assignments SET notes = ? WHERE holiday_id = ? AND date = ?', [
-    notes,
-    holidayId,
-    date,
-  ]);
-}
-
 /** Remove every assignment for a child on a day. */
 export async function clearDay(
   holidayId: number,

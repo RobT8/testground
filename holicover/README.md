@@ -63,6 +63,10 @@ runs three ways: the Capacitor plugin on Android, jeep-sqlite in the browser,
 and Node's built-in SQLite under test. Tests therefore exercise the real
 schema and the real queries.
 
+Day notes live in their own table rather than on assignment rows: a note like
+"pack swimming kit" describes the day, so storing it per assignment would
+duplicate it across slots and lose it on a day with no cover booked.
+
 Migrations live in `src/db/schema.ts` and are tracked with SQLite's
 `user_version`. A shipped migration is never edited — add a new one to the end
 of the array instead.
@@ -87,7 +91,7 @@ theme to `data-theme` on `<html>`, keeping it in sync if the OS setting changes.
 - [x] 3. Onboarding — welcome slides, add children, add carers
 - [x] 4. Home screen — holiday list, progress bars, stat cards
 - [x] 5. Weekly planner — week grid, navigation, gap detection
-- [ ] 6. Day assignment — carer picker, slot assignment, repeat logic
+- [x] 6. Day assignment — carer picker, slot assignment, repeat logic
 - [ ] 7. Children & Carers screens — full CRUD
 - [ ] 8. Settings — theme, backup/restore, delete all data
 - [ ] 9. Sharing — screenshot share, share code export/import

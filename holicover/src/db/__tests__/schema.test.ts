@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, createTestExecutor } from '../testExecutor';
 import { migrate } from '../migrate';
-import { SCHEMA_VERSION } from '../schema';
+import { MIGRATIONS, SCHEMA_VERSION } from '../schema';
 import type { DbExecutor } from '../executor';
 
 let db: DbExecutor & { close: () => void };
@@ -17,7 +17,7 @@ describe('migrations', () => {
       "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name",
     );
     const names = tables.map((t) => t.name);
-    for (const table of ['app_settings', 'assignments', 'carers', 'children', 'holidays']) {
+    for (const table of ['app_settings', 'assignments', 'carers', 'children', 'day_notes', 'holidays']) {
       expect(names).toContain(table);
     }
   });
@@ -29,6 +29,26 @@ describe('migrations', () => {
 
   it('is idempotent — a second launch re-runs nothing and does not throw', async () => {
     await expect(migrate(db)).resolves.toBe(SCHEMA_VERSION);
+  });
+
+  it('upgrades a database created by an earlier version', async () => {
+    // What happens on a device that already has the app installed: only the
+    // migrations it has not seen should run, and its data must survive.
+    const old = createTestExecutor();
+    await old.executeScript(MIGRATIONS[0]);
+    await old.executeScript('PRAGMA user_version = 1');
+    await old.run("INSERT INTO holidays (id, name, start_date, end_date) VALUES (1, 'October half term', '2026-10-19', '2026-10-23')");
+
+    await migrate(old);
+
+    const version = await old.query<{ user_version: number }>('PRAGMA user_version');
+    expect(version[0].user_version).toBe(SCHEMA_VERSION);
+    // The table added by v2 now exists...
+    await expect(old.query('SELECT * FROM day_notes')).resolves.toEqual([]);
+    // ...and the existing row is untouched.
+    const holidays = await old.query<{ name: string }>('SELECT name FROM holidays');
+    expect(holidays[0].name).toBe('October half term');
+    old.close();
   });
 
   it('runs every migration on a fresh database', async () => {

@@ -16,7 +16,6 @@ import {
   listAssignmentsForDate,
   listDayAssignments,
   repeatAssignments,
-  setDayNotes,
   setSlotAssignment,
   updateAssignment,
 } from '../assignments';
@@ -235,15 +234,6 @@ describe('day helpers', () => {
     await setSlotAssignment({ holiday_id: holidayId, child_id: ada, carer_id: gran, date: '2026-10-20', period: 'am' });
     await copyDay(holidayId, '2026-10-20', '2026-10-20');
     expect(await listDayAssignments(holidayId, ada, '2026-10-20')).toHaveLength(1);
-  });
-
-  it('sets a note across a day', async () => {
-    await setSlotAssignment({ holiday_id: holidayId, child_id: ada, carer_id: gran, date: '2026-10-20', period: 'am' });
-    await setSlotAssignment({ holiday_id: holidayId, child_id: bo, carer_id: mum, date: '2026-10-20', period: 'am' });
-    await setDayNotes(holidayId, '2026-10-20', 'INSET day');
-
-    const all = await listAssignmentsForDate(holidayId, '2026-10-20');
-    expect(all.every((a) => a.notes === 'INSET day')).toBe(true);
   });
 
   it('clears one child without touching the other', async () => {

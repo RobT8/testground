@@ -1029,3 +1029,223 @@ button {
 .day-list__slot--gap {
   border: 1px dashed var(--red-text);
 }
+
+/* ============================================================
+   Day assignment
+   ============================================================ */
+
+.child-card {
+  margin-bottom: 12px;
+}
+
+.child-card__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.child-card__name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.badge {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.badge--ok {
+  background: var(--carer-family-bg);
+  color: var(--carer-family-text);
+}
+
+.badge--gap {
+  background: var(--carer-gap-bg);
+  color: var(--carer-gap-text);
+}
+
+.slot-section + .slot-section {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 0.5px solid var(--border);
+}
+
+.slot-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.slot-section__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text2);
+  margin: 0;
+}
+
+.slot-section__assigned {
+  font-size: 15px;
+  margin: 0;
+}
+
+/* Tap-grid of carers: two columns, one tap to assign. */
+.carer-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.carer-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  text-align: left;
+}
+
+.carer-card--selected {
+  border: 1.5px solid var(--accent);
+  background: var(--accent-bg);
+}
+
+.carer-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.carer-card__icon--other {
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  color: var(--text3);
+  font-size: 15px;
+}
+
+.carer-card--other {
+  border-style: dashed;
+}
+
+.carer-card__name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-add {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.quick-add__times {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* Detailed mode */
+
+.time-slot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.time-slot + .time-slot {
+  border-top: 0.5px solid var(--border);
+}
+
+.time-slot__dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.time-slot__carer {
+  flex: 1;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time-slot__time {
+  width: 74px;
+  padding: 5px 6px;
+  border: 0.5px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.time-slot__dash {
+  color: var(--text3);
+  font-size: 12px;
+}
+
+/* Repeat */
+
+.repeat {
+  margin-bottom: 12px;
+}
+
+.repeat__title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.repeat__hint {
+  font-size: 12px;
+  color: var(--text2);
+  margin: 0 0 12px;
+}
+
+.repeat .chip:disabled {
+  opacity: 0.4;
+}
+
+.repeat__picker {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 0.5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.repeat__done {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--carer-family-text);
+}
+
+.note-field {
+  margin-bottom: 8px;
+}
