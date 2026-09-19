@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { HashRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import BottomNav from './components/BottomNav';
 import { useDatabase } from './hooks/useDatabase';
@@ -25,7 +26,11 @@ function AppShell() {
 }
 
 export default function App() {
-  const { ready, onboarded, error } = useDatabase();
+  const { ready, onboarded: storedOnboarded, error } = useDatabase();
+  // Finishing setup flips the guard immediately; without this the redirect
+  // below would bounce the user straight back into the wizard they just left.
+  const [justOnboarded, setJustOnboarded] = useState(false);
+  const onboarded = justOnboarded || storedOnboarded;
 
   if (error) {
     return (
@@ -62,7 +67,13 @@ export default function App() {
             home rather than stranded on it with no way back. */}
         <Route
           path="/onboarding"
-          element={onboarded ? <Navigate to="/" replace /> : <OnboardingScreen />}
+          element={
+            onboarded ? (
+              <Navigate to="/" replace />
+            ) : (
+              <OnboardingScreen onComplete={() => setJustOnboarded(true)} />
+            )
+          }
         />
         {!onboarded && <Route path="/" element={<Navigate to="/onboarding" replace />} />}
         <Route element={<AppShell />}>

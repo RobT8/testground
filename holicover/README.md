@@ -84,7 +84,7 @@ theme to `data-theme` on `<html>`, keeping it in sync if the OS setting changes.
 
 - [x] 1. Project scaffold — Vite + React + Capacitor + Android platform
 - [x] 2. Database layer — SQLite init, migrations, CRUD
-- [ ] 3. Onboarding — welcome slides, add children, add carers
+- [x] 3. Onboarding — welcome slides, add children, add carers
 - [ ] 4. Home screen — holiday list, progress bars, stat cards
 - [ ] 5. Weekly planner — week grid, navigation, gap detection
 - [ ] 6. Day assignment — carer picker, slot assignment, repeat logic
