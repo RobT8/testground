@@ -15,6 +15,7 @@ export default function HomeScreen() {
   const [editing, setEditing] = useState<Holiday | null>(null);
   const [deleting, setDeleting] = useState<Holiday | null>(null);
   const navigate = useNavigate();
+  const upcoming = nextBreak(todayISO(), next);
 
   async function handleSave(values: NewHoliday) {
     if (editing) {
@@ -52,8 +53,12 @@ export default function HomeScreen() {
 
       <div className="stats">
         <div className="stat card">
-          <span className="stat__label">Next break</span>
-          <span className="stat__value">{formatNextBreak(nextBreak(todayISO(), next))}</span>
+          {/* "in" only when a countdown follows it — "Next break in / Now"
+              would not read as a sentence. */}
+          <span className="stat__label">
+            {upcoming.kind === 'days' ? 'Next break in' : 'Next break'}
+          </span>
+          <span className="stat__value">{formatNextBreak(upcoming)}</span>
         </div>
         <div className="stat card">
           <span className="stat__label">Gaps to fill</span>

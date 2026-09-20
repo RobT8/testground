@@ -60,7 +60,7 @@ export default function WeeklyPlannerScreen() {
       <header className="planner-header">
         <button
           type="button"
-          className="icon-button"
+          className="back-button"
           aria-label="Back to holidays"
           onClick={() => navigate('/')}
         >

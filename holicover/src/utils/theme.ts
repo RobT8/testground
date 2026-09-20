@@ -2,10 +2,16 @@ export type ThemePreference = 'light' | 'dark' | 'system';
 
 const STORAGE_KEY = 'holicover.theme';
 
-/** What the user picked. `system` means "follow the OS". */
+/**
+ * What the user picked. `system` means "follow the OS".
+ *
+ * Defaults to light rather than system: the planner's carer colours were
+ * designed light-first, so that is the intended first impression. Anyone who
+ * prefers otherwise can switch in Settings.
+ */
 export function getThemePreference(): ThemePreference {
   const stored = localStorage.getItem(STORAGE_KEY);
-  return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+  return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'light';
 }
 
 function prefersDark(): boolean {

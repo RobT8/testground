@@ -134,7 +134,7 @@ export default function DayAssignScreen() {
   return (
     <div className="screen">
       <header className="planner-header">
-        <button type="button" className="icon-button" aria-label="Back to the week" onClick={back}>
+        <button type="button" className="back-button" aria-label="Back to the week" onClick={back}>
           ←
         </button>
         <div className="planner-header__titles">

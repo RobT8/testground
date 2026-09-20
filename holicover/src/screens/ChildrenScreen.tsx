@@ -41,7 +41,7 @@ export default function ChildrenScreen() {
       <header className="home-header">
         <div>
           <p className="page-eyebrow">HoliCover</p>
-          <h1 className="page-title">Children</h1>
+          <h1 className="page-title">Your children</h1>
         </div>
         <button type="button" className="fab" aria-label="Add child" onClick={() => setAdding(true)}>
           +

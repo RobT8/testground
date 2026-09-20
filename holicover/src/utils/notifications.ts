@@ -75,6 +75,23 @@ export async function rescheduleReminders(
   }
 }
 
+/**
+ * Re-sync reminders from whatever is currently saved.
+ *
+ * Called after any change to the holidays themselves: scheduling only when the
+ * setting changes would mean a holiday added later never got a reminder, and a
+ * deleted one kept firing.
+ */
+export async function syncReminders(): Promise<ReminderResult> {
+  if (!remindersSupported()) return { status: 'unsupported' };
+  const { getSetting } = await import('../db/settings');
+  const { listHolidays } = await import('../db/holidays');
+
+  const saved = Number(await getSetting('reminder_days'));
+  const days = Number.isFinite(saved) && saved >= 0 ? saved : DEFAULT_REMINDER_DAYS;
+  return rescheduleReminders(days, await listHolidays());
+}
+
 /** Remove every scheduled reminder, e.g. after wiping all data. */
 export async function cancelAllReminders(): Promise<void> {
   if (!remindersSupported()) return;

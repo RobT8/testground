@@ -9,6 +9,7 @@ import {
 } from '../db/holidays';
 import type { Holiday, NewHoliday } from '../db/types';
 import { todayISO } from '../utils/dates';
+import { syncReminders } from '../utils/notifications';
 
 export interface HolidaysState {
   holidays: Holiday[];
@@ -74,6 +75,8 @@ export function useHolidays(): HolidaysState {
     async (values: NewHoliday) => {
       await createHoliday(values);
       await reload();
+      // Keep notifications in step with the holidays they point at.
+      await syncReminders();
     },
     [reload],
   );
@@ -82,6 +85,8 @@ export function useHolidays(): HolidaysState {
     async (id: number, values: NewHoliday) => {
       await updateHoliday(id, values);
       await reload();
+      // Keep notifications in step with the holidays they point at.
+      await syncReminders();
     },
     [reload],
   );
@@ -90,6 +95,8 @@ export function useHolidays(): HolidaysState {
     async (id: number) => {
       await deleteHolidayRow(id);
       await reload();
+      // Keep notifications in step with the holidays they point at.
+      await syncReminders();
     },
     [reload],
   );
