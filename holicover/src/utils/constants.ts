@@ -54,3 +54,16 @@ export const ONBOARDING_COMPLETE_KEY = 'onboarding_complete';
 /** Free-tier caps. Lifted by the Pro unlock. */
 export const FREE_TIER_MAX_CHILDREN = 2;
 export const FREE_TIER_MAX_HOLIDAYS = 2;
+
+/**
+ * Outward-facing links and addresses, kept together so there is one place to
+ * change them.
+ *
+ * The legal pages are served by GitHub Pages from the docs/ folder at the
+ * repository root. Google Play requires the privacy policy URL to be publicly
+ * reachable before the app can be published.
+ */
+export const SUPPORT_EMAIL = 'support@holicover.app';
+export const PRIVACY_URL = 'https://robt8.github.io/testground/privacy.html';
+export const TERMS_URL = 'https://robt8.github.io/testground/terms.html';
+export const PLAY_STORE_URL = 'market://details?id=com.holicover.app';

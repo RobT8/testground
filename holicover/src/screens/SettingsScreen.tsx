@@ -10,6 +10,12 @@ import {
   rescheduleReminders,
 } from '../utils/notifications';
 import { getThemePreference, setThemePreference, type ThemePreference } from '../utils/theme';
+import {
+  PLAY_STORE_URL,
+  PRIVACY_URL,
+  SUPPORT_EMAIL,
+  TERMS_URL,
+} from '../utils/constants';
 import { downloadBackup } from '../utils/share';
 
 const REMINDER_KEY = 'reminder_days';
@@ -19,10 +25,6 @@ const THEMES: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
 ];
 
-const PRIVACY_URL = 'https://holicover.app/privacy';
-const TERMS_URL = 'https://holicover.app/terms';
-const SUPPORT_EMAIL = 'support@holicover.app';
-const PLAY_STORE_URL = 'market://details?id=com.holicover.app';
 
 export default function SettingsScreen() {
   const [theme, setTheme] = useState<ThemePreference>(getThemePreference);
