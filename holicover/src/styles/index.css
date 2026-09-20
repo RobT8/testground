@@ -8,7 +8,10 @@
   --border: #E5E3DE;
   --text: #1A1A1A;
   --text2: #6B6A66;
-  --text3: #9C9A92;
+  /* Decoration only — punctuation, "+" glyphs inside labelled controls, the
+     repeated app-name eyebrow. Below 4.5:1 on small text by design, so
+     anything a user actually needs to read uses --text2. */
+  --text3: #8A8880;
   --accent: #185FA5;
   --accent-bg: #E6F1FB;
   /* Text sitting ON the accent colour. The accent inverts between themes, so
@@ -53,7 +56,7 @@
   --border: #3A3A38;
   --text: #E8E6DE;
   --text2: #9C9A92;
-  --text3: #6B6A66;
+  --text3: #8E8C84;
   --accent: #85B7EB;
   --accent-bg: #0C447C;
   --accent-text: #1A1A1A;
@@ -180,7 +183,7 @@ button {
   gap: 2px;
   padding: 10px 0 12px;
   text-decoration: none;
-  color: var(--text3);
+  color: var(--text2);
 }
 
 .bottom-nav__item--active {
@@ -452,7 +455,7 @@ button {
 
 .entity-row__meta {
   font-size: 12px;
-  color: var(--text3);
+  color: var(--text2);
 }
 
 .child-avatar {
@@ -585,7 +588,7 @@ button {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text3);
+  color: var(--text2);
 }
 
 .stat__value {
@@ -822,7 +825,7 @@ button {
 
 .form-hint {
   font-size: 12px;
-  color: var(--text3);
+  color: var(--text2);
   margin: 0 0 12px;
 }
 
@@ -947,7 +950,7 @@ button {
   border: 1px dashed var(--border);
   border-radius: 6px;
   background: none;
-  color: var(--text3);
+  color: var(--text2);
   font-size: 13px;
   line-height: 1;
 }
@@ -1248,4 +1251,92 @@ button {
 
 .note-field {
   margin-bottom: 8px;
+}
+
+/* ============================================================
+   Children and carers management
+   ============================================================ */
+
+.entity-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 15px;
+  color: inherit;
+}
+
+.entity-row__title {
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entity-row__sub {
+  font-size: 11px;
+  color: var(--text2);
+}
+
+.reorder {
+  display: flex;
+  gap: 0;
+}
+
+.reorder .icon-button {
+  padding: 6px 5px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.reorder .icon-button:disabled {
+  opacity: 0.25;
+}
+
+.carer-group {
+  margin-bottom: 18px;
+}
+
+.carer-group__title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text2);
+  margin: 0 0 8px;
+}
+
+.add-below {
+  margin-top: 6px;
+}
+
+/* Custom colour swatch, wrapping the platform colour picker. */
+.swatch--custom {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.swatch__plus {
+  color: var(--text3);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.swatch__input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
 }

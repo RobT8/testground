@@ -2,7 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { setDbExecutor } from '../database';
 import { createTestDb } from '../testExecutor';
 import type { DbExecutor } from '../executor';
-import { createChild, deleteChild, listChildren, reorderChildren, updateChild } from '../children';
+import {
+  countChildAssignments,
+  createChild,
+  deleteChild,
+  listChildren,
+  reorderChildren,
+  updateChild,
+} from '../children';
 import {
   countCarerAssignments,
   createCarer,
@@ -68,6 +75,25 @@ describe('children', () => {
     const id = await createChild({ name: 'Ada', colour: '#378ADD' });
     await deleteChild(id);
     expect(await listChildren()).toHaveLength(0);
+  });
+
+  it('counts assignments so deletion can warn first', async () => {
+    const holiday = await createHoliday({
+      name: 'October half term',
+      start_date: '2026-10-19',
+      end_date: '2026-10-23',
+      mode: 'simple',
+      exclude_weekends: 1,
+    });
+    const child = await createChild({ name: 'Ada', colour: '#378ADD' });
+    const carer = await createCarer({ name: 'Grandma', short_name: 'Gran', type: 'family' });
+
+    expect(await countChildAssignments(child)).toBe(0);
+    await db.run(
+      'INSERT INTO assignments (holiday_id, child_id, carer_id, date, period) VALUES (?, ?, ?, ?, ?)',
+      [holiday, child, carer, '2026-10-20', 'am'],
+    );
+    expect(await countChildAssignments(child)).toBe(1);
   });
 });
 

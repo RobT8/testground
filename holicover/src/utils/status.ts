@@ -40,3 +40,26 @@ export function coverageSummary(coverage: HolidayCoverage): string {
 export function formatGapCount(slots: number): string {
   return slots === 1 ? '1 slot' : `${slots} slots`;
 }
+
+/** Longest short name that still fits a weekly grid cell. */
+export const MAX_SHORT_NAME = 8;
+
+/**
+ * Suggest a grid-sized short name from a full one.
+ *
+ * Prefers the first word when it fits on its own — "Holiday club" reads better
+ * as "Holiday" than as a hard "Holiday c" truncation.
+ */
+export function suggestShortName(name: string): string {
+  const trimmed = name.trim();
+  if (trimmed.length <= MAX_SHORT_NAME) return trimmed;
+
+  const firstWord = trimmed.split(/\s+/)[0];
+  if (firstWord.length <= MAX_SHORT_NAME) return firstWord;
+  return trimmed.slice(0, MAX_SHORT_NAME);
+}
+
+/** "£32.50/day", dropping a trailing ".00". */
+export function formatCost(cost: number): string {
+  return `£${cost.toFixed(2).replace(/\.00$/, '')}/day`;
+}

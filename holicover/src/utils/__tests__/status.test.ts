@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { coverageSummary, formatGapCount, formatNextBreak, nextBreak } from '../status';
+import {
+  MAX_SHORT_NAME,
+  coverageSummary,
+  formatCost,
+  formatGapCount,
+  formatNextBreak,
+  nextBreak,
+  suggestShortName,
+} from '../status';
 import type { Holiday } from '../../db/types';
 import type { HolidayCoverage } from '../../db/coverage';
 
@@ -74,5 +82,50 @@ describe('formatGapCount', () => {
     expect(formatGapCount(0)).toBe('0 slots');
     expect(formatGapCount(1)).toBe('1 slot');
     expect(formatGapCount(12)).toBe('12 slots');
+  });
+});
+
+describe('suggestShortName', () => {
+  it('keeps a name that already fits', () => {
+    expect(suggestShortName('Mum')).toBe('Mum');
+    expect(suggestShortName('Grandma')).toBe('Grandma');
+  });
+
+  it('prefers the first word over a hard truncation', () => {
+    expect(suggestShortName('Holiday club')).toBe('Holiday');
+    expect(suggestShortName('Auntie Jo from next door')).toBe('Auntie');
+  });
+
+  it('truncates when even the first word is too long', () => {
+    expect(suggestShortName('Grandmother')).toBe('Grandmot');
+  });
+
+  it('trims surrounding whitespace', () => {
+    expect(suggestShortName('  Gran  ')).toBe('Gran');
+  });
+
+  it('handles an empty name', () => {
+    expect(suggestShortName('')).toBe('');
+  });
+
+  it('never exceeds the grid cell length', () => {
+    for (const name of ['Mum', 'Holiday club', 'Grandmother', 'Extraordinarily Long Name']) {
+      expect(suggestShortName(name).length).toBeLessThanOrEqual(MAX_SHORT_NAME);
+    }
+  });
+});
+
+describe('formatCost', () => {
+  it('drops a trailing .00', () => {
+    expect(formatCost(32)).toBe('£32/day');
+  });
+
+  it('keeps pence', () => {
+    expect(formatCost(32.5)).toBe('£32.50/day');
+    expect(formatCost(7.25)).toBe('£7.25/day');
+  });
+
+  it('handles zero', () => {
+    expect(formatCost(0)).toBe('£0/day');
   });
 });

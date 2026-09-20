@@ -44,7 +44,20 @@ export async function deleteChild(id: number): Promise<void> {
   await db.run('DELETE FROM children WHERE id = ?', [id]);
 }
 
-/** Persist a drag-to-reorder, given the child ids in their new order. */
+/**
+ * How many assignments reference this child. Deleting them takes their cover
+ * with it, so the confirmation says what is about to be lost.
+ */
+export async function countChildAssignments(id: number): Promise<number> {
+  const db = await getDb();
+  const rows = await db.query<{ n: number }>(
+    'SELECT COUNT(*) AS n FROM assignments WHERE child_id = ?',
+    [id],
+  );
+  return rows[0]?.n ?? 0;
+}
+
+/** Persist a reorder, given the child ids in their new order. */
 export async function reorderChildren(orderedIds: number[]): Promise<void> {
   const db = await getDb();
   for (let i = 0; i < orderedIds.length; i++) {

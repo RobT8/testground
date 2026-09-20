@@ -84,6 +84,17 @@ preference (light / dark / system) is stored in `localStorage`;
 `src/utils/theme.ts` resolves `system` against the OS and writes the concrete
 theme to `data-theme` on `<html>`, keeping it in sync if the OS setting changes.
 
+## Colour tokens
+
+`--text` and `--text2` carry content and meet WCAG AA in both themes.
+`--text3` is decoration only — punctuation, "+" glyphs inside already-labelled
+controls, the repeated app-name eyebrow — and sits below 4.5:1 on small text by
+design. Anything a user needs to read uses `--text2`.
+
+Colours that serve two roles need two tokens: `--red-text` is a foreground and
+`--danger-bg`/`--danger-on` the destructive button, because a red that reads on
+the page background is unreadable as a button fill once the theme flips.
+
 ## Build progress
 
 - [x] 1. Project scaffold — Vite + React + Capacitor + Android platform
@@ -92,7 +103,7 @@ theme to `data-theme` on `<html>`, keeping it in sync if the OS setting changes.
 - [x] 4. Home screen — holiday list, progress bars, stat cards
 - [x] 5. Weekly planner — week grid, navigation, gap detection
 - [x] 6. Day assignment — carer picker, slot assignment, repeat logic
-- [ ] 7. Children & Carers screens — full CRUD
+- [x] 7. Children & Carers screens — full CRUD
 - [ ] 8. Settings — theme, backup/restore, delete all data
 - [ ] 9. Sharing — screenshot share, share code export/import
 - [ ] 10. Polish — animations, loading/empty states, error handling
