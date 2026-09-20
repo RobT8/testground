@@ -65,31 +65,33 @@ export default function App() {
     // HashRouter: the Android WebView serves the app from a file-ish origin,
     // so hash routing avoids deep-link 404s on reload.
     <HashRouter>
-      <Routes>
-        {/* The wizard runs once: first launch is sent to it, and anyone
-            arriving at its URL afterwards (a reload, a stale link) is sent
-            home rather than stranded on it with no way back. */}
-        <Route
-          path="/onboarding"
-          element={
-            onboarded ? (
-              <Navigate to="/" replace />
-            ) : (
-              <OnboardingScreen onComplete={() => setJustOnboarded(true)} />
-            )
-          }
-        />
-        {!onboarded && <Route path="/" element={<Navigate to="/onboarding" replace />} />}
-        <Route element={<AppShell />}>
-          <Route path="/" element={<HomeScreen />} />
-          <Route path="/holiday/:holidayId" element={<WeeklyPlannerScreen />} />
-          <Route path="/holiday/:holidayId/day/:date" element={<DayAssignScreen />} />
-          <Route path="/children" element={<ChildrenScreen />} />
-          <Route path="/carers" element={<CarersScreen />} />
-          <Route path="/settings" element={<SettingsScreen />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      {/* Until setup is done there is nothing else worth showing, so every
+          route leads back to it — including after "Delete all data", which
+          reloads on whatever screen the user was standing on. */}
+      {!onboarded ? (
+        <Routes>
+          <Route
+            path="/onboarding"
+            element={<OnboardingScreen onComplete={() => setJustOnboarded(true)} />}
+          />
+          <Route path="*" element={<Navigate to="/onboarding" replace />} />
+        </Routes>
+      ) : (
+        <Routes>
+          {/* The wizard runs once: anyone arriving at its URL afterwards (a
+              reload, a stale link) is sent home rather than stranded on it. */}
+          <Route path="/onboarding" element={<Navigate to="/" replace />} />
+          <Route element={<AppShell />}>
+            <Route path="/" element={<HomeScreen />} />
+            <Route path="/holiday/:holidayId" element={<WeeklyPlannerScreen />} />
+            <Route path="/holiday/:holidayId/day/:date" element={<DayAssignScreen />} />
+            <Route path="/children" element={<ChildrenScreen />} />
+            <Route path="/carers" element={<CarersScreen />} />
+            <Route path="/settings" element={<SettingsScreen />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      )}
     </HashRouter>
   );
 }

@@ -1,4 +1,4 @@
-import { createReadStream } from 'node:fs';
+import { createReadStream, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import {
   defineConfig,
@@ -38,6 +38,14 @@ function sqlWasmPlugin(): Plugin {
   };
 }
 
+const { version } = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+) as { version: string };
+
 export default defineConfig({
   plugins: [react(), sqlWasmPlugin()],
+  define: {
+    // Settings shows this; package.json stays the single source of truth.
+    __APP_VERSION__: JSON.stringify(version),
+  },
 });

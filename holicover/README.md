@@ -84,6 +84,20 @@ preference (light / dark / system) is stored in `localStorage`;
 `src/utils/theme.ts` resolves `system` against the OS and writes the concrete
 theme to `data-theme` on `<html>`, keeping it in sync if the OS setting changes.
 
+## Backup files
+
+`exportData` writes every table plus the app settings into one JSON file
+stamped with the schema version. Import validates before touching anything —
+a malformed file is rejected with nothing deleted — then replaces the device's
+contents wholesale rather than merging, keeping row ids so assignments still
+point at the right child and carer. A backup from a newer schema is refused;
+one from an older schema is accepted, with tables added since defaulting to
+empty.
+
+On Android the file goes to app storage and then the system share sheet, so it
+can be saved to Drive, Files or email. Writing straight to the public Downloads
+folder would need storage permissions the app otherwise never asks for.
+
 ## Colour tokens
 
 `--text` and `--text2` carry content and meet WCAG AA in both themes.
@@ -104,6 +118,6 @@ the page background is unreadable as a button fill once the theme flips.
 - [x] 5. Weekly planner — week grid, navigation, gap detection
 - [x] 6. Day assignment — carer picker, slot assignment, repeat logic
 - [x] 7. Children & Carers screens — full CRUD
-- [ ] 8. Settings — theme, backup/restore, delete all data
+- [x] 8. Settings — theme, backup/restore, delete all data
 - [ ] 9. Sharing — screenshot share, share code export/import
 - [ ] 10. Polish — animations, loading/empty states, error handling
