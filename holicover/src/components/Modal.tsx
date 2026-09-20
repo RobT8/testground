@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useBackInterceptor } from '../hooks/useBackButton';
 
 interface ModalProps {
   title: string;
@@ -9,6 +10,9 @@ interface ModalProps {
 /** A sheet anchored to the bottom of the screen, the usual mobile pattern. */
 export default function Modal({ title, onClose, children }: ModalProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
+
+  // Android back closes the sheet rather than navigating out from under it.
+  useBackInterceptor(onClose);
 
   useEffect(() => {
     // Android's back gesture surfaces as Escape in the WebView.

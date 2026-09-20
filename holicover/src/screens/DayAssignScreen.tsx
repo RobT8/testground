@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import CarerPicker from '../components/CarerPicker';
 import ChildAvatar from '../components/ChildAvatar';
+import Loading from '../components/Loading';
 import RepeatChips from '../components/RepeatChips';
 import TimeSlotEditor from '../components/TimeSlotEditor';
 import {
@@ -55,7 +56,7 @@ export default function DayAssignScreen() {
   if (loading) {
     return (
       <div className="screen">
-        <p className="placeholder-note">Loading…</p>
+        <Loading />
       </div>
     );
   }
@@ -141,6 +142,19 @@ export default function DayAssignScreen() {
           <p className="planner-header__week">{holiday.name}</p>
         </div>
       </header>
+
+      {carers.length === 0 && (
+        <div className="empty-state card">
+          <p className="empty-state__title">No carers yet</p>
+          <p className="empty-state__body">
+            Add the people and clubs who help, then you can assign them to a morning or
+            afternoon.
+          </p>
+          <button type="button" className="button button--primary" onClick={() => navigate('/carers')}>
+            Add a carer
+          </button>
+        </div>
+      )}
 
       {children.map((child) => {
         const assignments = byDayAndChild.get(dayKey(date, child.id));

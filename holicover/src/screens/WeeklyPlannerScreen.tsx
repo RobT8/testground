@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DayList from '../components/DayList';
+import Loading from '../components/Loading';
 import WeekGrid from '../components/WeekGrid';
 import { useAssignments } from '../hooks/useAssignments';
 import { todayISO } from '../utils/dates';
@@ -33,7 +34,7 @@ export default function WeeklyPlannerScreen() {
   if (loading) {
     return (
       <div className="screen">
-        <p className="placeholder-note">Loading…</p>
+        <Loading />
       </div>
     );
   }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import CarerForm from '../components/CarerForm';
 import CarerIcon from '../components/CarerIcon';
+import Loading from '../components/Loading';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Modal from '../components/Modal';
 import { countCarerAssignments } from '../db/carers';
@@ -55,7 +56,7 @@ export default function CarersScreen() {
       )}
 
       {loading ? (
-        <p className="placeholder-note">Loading…</p>
+        <Loading />
       ) : carers.length === 0 ? (
         <div className="empty-state card">
           <p className="empty-state__title">No carers yet</p>

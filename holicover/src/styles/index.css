@@ -1462,3 +1462,135 @@ button {
   white-space: nowrap;
   border: 0;
 }
+
+/* ============================================================
+   Polish — motion, feedback, loading and error states
+   ============================================================ */
+
+/* Tap feedback. Native tap highlight is off, so without this nothing
+   acknowledges a press and controls feel dead under a thumb. */
+.button,
+.chip,
+.carer-card,
+.slot,
+.setting-row--action,
+.holiday-card__body,
+.day-list__day,
+.entity-row__main,
+.dashed-button,
+.swatch,
+.segmented__option,
+.fab {
+  transition:
+    transform 90ms ease,
+    opacity 90ms ease,
+    background-color 120ms ease;
+}
+
+.button:active:not(:disabled),
+.chip:active:not(:disabled),
+.carer-card:active,
+.slot:active,
+.setting-row--action:active:not(:disabled),
+.holiday-card__body:active,
+.day-list__day:active,
+.entity-row__main:active,
+.dashed-button:active:not(:disabled),
+.fab:active {
+  transform: scale(0.975);
+  opacity: 0.9;
+}
+
+.swatch:active,
+.segmented__option:active {
+  transform: scale(0.94);
+}
+
+/* Modal: slide the sheet up rather than having it appear. */
+@keyframes sheet-in {
+  from {
+    transform: translateY(12%);
+    opacity: 0.6;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.modal {
+  animation: fade-in 140ms ease;
+}
+
+.modal__sheet {
+  animation: sheet-in 190ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.screen {
+  animation: fade-in 120ms ease;
+}
+
+/* Loading */
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 0;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.loading__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error-detail {
+  margin-top: 18px;
+  padding: 10px 12px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text2);
+  font-size: 11px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  word-break: break-word;
+}
+
+/* Honour the system setting: motion can cause real discomfort, and a
+   spinner that never resolves visually is worse than a static one. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .loading__spinner {
+    animation: none;
+    border-top-color: var(--accent);
+  }
+}
+
+/* Keyboard focus must stay visible even though tap highlight is off. */
+:where(button, a, select, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

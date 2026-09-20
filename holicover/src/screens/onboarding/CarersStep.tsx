@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Loading from '../../components/Loading';
 import { createCarer, deleteCarer, listCarers } from '../../db/carers';
 import type { Carer } from '../../db/types';
 import {
@@ -90,7 +91,7 @@ export default function CarersStep({ onDone, busy }: CarersStepProps) {
       !DEFAULT_CARERS.some((preset) => preset.name === carer.name && preset.type === carer.type),
   );
 
-  if (loading) return <p className="placeholder-note">Loading…</p>;
+  if (loading) return <Loading />;
 
   return (
     <div className="step">

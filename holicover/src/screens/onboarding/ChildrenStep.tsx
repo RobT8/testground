@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Loading from '../../components/Loading';
 import ChildAvatar from '../../components/ChildAvatar';
 import { createChild, deleteChild, listChildren, updateChild } from '../../db/children';
 import type { Child } from '../../db/types';
@@ -89,7 +90,7 @@ export default function ChildrenStep({ onNext }: ChildrenStepProps) {
     await refresh();
   }
 
-  if (loading) return <p className="placeholder-note">Loading…</p>;
+  if (loading) return <Loading />;
 
   return (
     <div className="step">

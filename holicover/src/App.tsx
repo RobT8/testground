@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { HashRouter, Navigate, Outlet, Route, Routes, matchPath, useLocation } from 'react-router-dom';
 import BottomNav from './components/BottomNav';
 import { useDatabase } from './hooks/useDatabase';
+import { useAndroidBackButton } from './hooks/useBackButton';
+import Loading from './components/Loading';
 import OnboardingScreen from './screens/OnboardingScreen';
 import HomeScreen from './screens/HomeScreen';
 import WeeklyPlannerScreen from './screens/WeeklyPlannerScreen';
@@ -36,6 +38,10 @@ export default function App() {
   const [justOnboarded, setJustOnboarded] = useState(false);
   const onboarded = justOnboarded || storedOnboarded;
 
+  // Android's back button is not wired to anything in a WebView, so without
+  // this it closes the app from any screen instead of going back.
+  useAndroidBackButton();
+
   if (error) {
     return (
       <div className="app-shell">
@@ -55,7 +61,7 @@ export default function App() {
     return (
       <div className="app-shell">
         <div className="screen screen--centred">
-          <p className="placeholder-note">Loading…</p>
+          <Loading />
         </div>
       </div>
     );

@@ -98,6 +98,14 @@ On Android the file goes to app storage and then the system share sheet, so it
 can be saved to Drive, Files or email. Writing straight to the public Downloads
 folder would need storage permissions the app otherwise never asks for.
 
+## Android back button
+
+A WebView wires nothing to Android's back button or back gesture, so without
+`useAndroidBackButton` it closes the app from any screen. `handleBackPress`
+decides what a press means: anything layered over a screen (a modal, a
+confirmation) registers an interceptor and is dismissed first, otherwise it
+navigates back, and only at the first screen does the app exit.
+
 ## Colour tokens
 
 `--text` and `--text2` carry content and meet WCAG AA in both themes.

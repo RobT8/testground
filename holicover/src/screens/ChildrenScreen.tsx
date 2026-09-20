@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import ChildAvatar from '../components/ChildAvatar';
 import ChildForm from '../components/ChildForm';
+import Loading from '../components/Loading';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Modal from '../components/Modal';
 import { countChildAssignments } from '../db/children';
@@ -54,7 +55,7 @@ export default function ChildrenScreen() {
       )}
 
       {loading ? (
-        <p className="placeholder-note">Loading…</p>
+        <Loading />
       ) : children.length === 0 ? (
         <div className="empty-state card">
           <p className="empty-state__title">No children yet</p>
