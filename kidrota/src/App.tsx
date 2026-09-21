@@ -1,0 +1,103 @@
+import { useState } from 'react';
+import { HashRouter, Navigate, Outlet, Route, Routes, matchPath, useLocation } from 'react-router-dom';
+import BottomNav from './components/BottomNav';
+import { useDatabase } from './hooks/useDatabase';
+import { useAndroidBackButton } from './hooks/useBackButton';
+import Loading from './components/Loading';
+import OnboardingScreen from './screens/OnboardingScreen';
+import HomeScreen from './screens/HomeScreen';
+import WeeklyPlannerScreen from './screens/WeeklyPlannerScreen';
+import DayAssignScreen from './screens/DayAssignScreen';
+import ChildrenScreen from './screens/ChildrenScreen';
+import CarersScreen from './screens/CarersScreen';
+import SettingsScreen from './screens/SettingsScreen';
+
+/**
+ * Routes that sit behind the bottom navigation bar. The weekly planner keeps
+ * it; the day assignment screen below it does not, so that screen is a focused
+ * task the back arrow returns from.
+ */
+const NAV_PATTERNS = ['/', '/children', '/carers', '/settings', '/holiday/:holidayId'];
+
+function AppShell() {
+  const { pathname } = useLocation();
+  const showNav = NAV_PATTERNS.some((pattern) => matchPath({ path: pattern, end: true }, pathname));
+
+  return (
+    <div className="app-shell">
+      <Outlet />
+      {showNav && <BottomNav />}
+    </div>
+  );
+}
+
+export default function App() {
+  const { ready, onboarded: storedOnboarded, error } = useDatabase();
+  // Finishing setup flips the guard immediately; without this the redirect
+  // below would bounce the user straight back into the wizard they just left.
+  const [justOnboarded, setJustOnboarded] = useState(false);
+  const onboarded = justOnboarded || storedOnboarded;
+
+  // Android's back button is not wired to anything in a WebView, so without
+  // this it closes the app from any screen instead of going back.
+  useAndroidBackButton();
+
+  if (error) {
+    return (
+      <div className="app-shell">
+        <div className="screen">
+          <h1 className="page-title">Something went wrong</h1>
+          <p className="placeholder-note">
+            KidRota could not open its database. Restarting the app usually fixes this.
+          </p>
+          <p className="placeholder-note">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Nothing renders until the schema exists — every screen below assumes it.
+  if (!ready) {
+    return (
+      <div className="app-shell">
+        <div className="screen screen--centred">
+          <Loading />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    // HashRouter: the Android WebView serves the app from a file-ish origin,
+    // so hash routing avoids deep-link 404s on reload.
+    <HashRouter>
+      {/* Until setup is done there is nothing else worth showing, so every
+          route leads back to it — including after "Delete all data", which
+          reloads on whatever screen the user was standing on. */}
+      {!onboarded ? (
+        <Routes>
+          <Route
+            path="/onboarding"
+            element={<OnboardingScreen onComplete={() => setJustOnboarded(true)} />}
+          />
+          <Route path="*" element={<Navigate to="/onboarding" replace />} />
+        </Routes>
+      ) : (
+        <Routes>
+          {/* The wizard runs once: anyone arriving at its URL afterwards (a
+              reload, a stale link) is sent home rather than stranded on it. */}
+          <Route path="/onboarding" element={<Navigate to="/" replace />} />
+          <Route element={<AppShell />}>
+            <Route path="/" element={<HomeScreen />} />
+            <Route path="/holiday/:holidayId" element={<WeeklyPlannerScreen />} />
+            <Route path="/holiday/:holidayId/day/:date" element={<DayAssignScreen />} />
+            <Route path="/children" element={<ChildrenScreen />} />
+            <Route path="/carers" element={<CarersScreen />} />
+            <Route path="/settings" element={<SettingsScreen />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      )}
+    </HashRouter>
+  );
+}
