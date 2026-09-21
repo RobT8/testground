@@ -13,8 +13,8 @@ gaps are obvious at a glance.
 |---|---|
 | Play title (30 char limit) | `KidRota School Holiday Planner` — exactly 30 |
 | Package ID | `com.kidrota.app` — **permanent after first publish** |
-| Privacy policy | https://robt8.github.io/testground/privacy.html |
-| Terms | https://robt8.github.io/testground/terms.html |
+| Privacy policy | https://robt8.github.io/kidrota/privacy.html |
+| Terms | https://robt8.github.io/kidrota/terms.html |
 
 The title drops a colon after the brand deliberately: `KidRota: School
 Holiday Planner` is 31 characters and would be rejected.

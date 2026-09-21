@@ -64,6 +64,6 @@ export const FREE_TIER_MAX_HOLIDAYS = 2;
  * reachable before the app can be published.
  */
 export const SUPPORT_EMAIL = 'support@kidrota.app';
-export const PRIVACY_URL = 'https://robt8.github.io/testground/privacy.html';
-export const TERMS_URL = 'https://robt8.github.io/testground/terms.html';
+export const PRIVACY_URL = 'https://robt8.github.io/kidrota/privacy.html';
+export const TERMS_URL = 'https://robt8.github.io/kidrota/terms.html';
 export const PLAY_STORE_URL = 'market://details?id=com.kidrota.app';
