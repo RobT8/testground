@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { BackupError, exportData, importData, wipeAllData } from '../db/backup';
+import { importSharedPlan } from '../db/importPlan';
+import { ShareCodeError, decodePlan } from '../utils/shareCode';
+import { plural } from '../utils/status';
+import Modal from '../components/Modal';
 import { listHolidays } from '../db/holidays';
 import { getSetting, setSetting } from '../db/settings';
 import {
@@ -31,6 +35,8 @@ export default function SettingsScreen() {
   const [reminderDays, setReminderDays] = useState(DEFAULT_REMINDER_DAYS);
   const [status, setStatus] = useState<{ kind: 'ok' | 'bad'; text: string } | null>(null);
   const [confirmWipe, setConfirmWipe] = useState(false);
+  const [pasting, setPasting] = useState(false);
+  const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -115,6 +121,34 @@ export default function SettingsScreen() {
             ? error.message
             : 'That file could not be read. It may not be a KidRota backup.',
       });
+      setBusy(false);
+    }
+  }
+
+  /** Take a plan code from the other parent and add it to this device. */
+  async function handlePasteCode() {
+    setBusy(true);
+    setStatus(null);
+    try {
+      const result = await importSharedPlan(decodePlan(code));
+      const people = [
+        result.childrenAdded > 0 ? `${plural(result.childrenAdded, 'child', 'children')}` : null,
+        result.carersAdded > 0 ? `${plural(result.carersAdded, 'carer', 'carers')}` : null,
+      ].filter(Boolean);
+      setStatus({
+        kind: 'ok',
+        text: `Added “${result.holidayName}” with ${plural(result.assignments, 'slot', 'slots')}${
+          people.length ? `, plus ${people.join(' and ')}` : ''
+        }.`,
+      });
+      setPasting(false);
+      setCode('');
+    } catch (error) {
+      setStatus({
+        kind: 'bad',
+        text: error instanceof ShareCodeError ? error.message : 'That code could not be read.',
+      });
+    } finally {
       setBusy(false);
     }
   }
@@ -226,6 +260,27 @@ export default function SettingsScreen() {
       </section>
 
       <section className="settings-group">
+        <h2 className="settings-group__title">Shared plans</h2>
+        <button
+          type="button"
+          className="setting-row setting-row--action"
+          disabled={busy}
+          onClick={() => {
+            setStatus(null);
+            setPasting(true);
+          }}
+        >
+          <span className="setting-row__label">
+            Add a plan someone sent you
+            <span className="setting-row__sub">
+              Paste their code — it adds to your plans, it does not replace them
+            </span>
+          </span>
+          <span className="setting-row__chevron">›</span>
+        </button>
+      </section>
+
+      <section className="settings-group">
         <h2 className="settings-group__title">KidRota Pro</h2>
         <button type="button" className="setting-row setting-row--action setting-row--accent" disabled>
           <span className="setting-row__label">
@@ -269,6 +324,35 @@ export default function SettingsScreen() {
           <span className="setting-row__label">Delete all data</span>
         </button>
       </section>
+
+      {pasting && (
+        <Modal title="Add a shared plan" onClose={() => setPasting(false)}>
+          <label className="field">
+            <span className="field__label">Paste the code they sent you</span>
+            <textarea
+              className="field__input code-input"
+              value={code}
+              rows={5}
+              placeholder="KIDROTA1:…"
+              autoFocus
+              onChange={(event) => setCode(event.target.value)}
+            />
+          </label>
+          <div className="holiday-form__actions">
+            <button type="button" className="button button--secondary" onClick={() => setPasting(false)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="button button--primary"
+              disabled={!code.trim() || busy}
+              onClick={handlePasteCode}
+            >
+              {busy ? 'Adding…' : 'Add plan'}
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {confirmWipe && (
         <ConfirmDialog

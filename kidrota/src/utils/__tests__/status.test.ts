@@ -6,6 +6,7 @@ import {
   formatGapCount,
   formatNextBreak,
   nextBreak,
+  plural,
   suggestShortName,
 } from '../status';
 import type { Holiday } from '../../db/types';
@@ -127,5 +128,17 @@ describe('formatCost', () => {
 
   it('handles zero', () => {
     expect(formatCost(0)).toBe('£0/day');
+  });
+});
+
+describe('plural', () => {
+  it('uses the singular for one', () => {
+    expect(plural(1, 'child', 'children')).toBe('1 child');
+    expect(plural(1, 'carer', 'carers')).toBe('1 carer');
+  });
+
+  it('uses the plural otherwise', () => {
+    expect(plural(0, 'slot', 'slots')).toBe('0 slots');
+    expect(plural(4, 'child', 'children')).toBe('4 children');
   });
 });

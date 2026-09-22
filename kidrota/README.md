@@ -96,6 +96,20 @@ preference (light / dark / system) is stored in `localStorage`;
 `src/utils/theme.ts` resolves `system` against the OS and writes the concrete
 theme to `data-theme` on `<html>`, keeping it in sync if the OS setting changes.
 
+## Share codes
+
+A whole holiday travels as one pasteable string, because there is no server
+between the two parents. Children and carers become indices and dates become
+day offsets from the holiday's start, and trailing nulls are trimmed from each
+assignment — together that takes a planned fortnight for two children from
+about 6KB of plain JSON to roughly 1KB, which is the difference between a code
+that pastes into a message and one that does not.
+
+Importing a code *adds* to the device rather than replacing it, unlike a backup
+restore: the code arrives while the recipient already has their own children
+and carers set up. People are matched by name, case and spacing ignored, so an
+import does not leave you with two of everyone.
+
 ## Backup files
 
 `exportData` writes every table plus the app settings into one JSON file
@@ -139,5 +153,5 @@ the page background is unreadable as a button fill once the theme flips.
 - [x] 6. Day assignment — carer picker, slot assignment, repeat logic
 - [x] 7. Children & Carers screens — full CRUD
 - [x] 8. Settings — theme, backup/restore, delete all data
-- [ ] 9. Sharing — screenshot share, share code export/import
+- [x] 9. Sharing — screenshot share, share code export/import
 - [ ] 10. Polish — animations, loading/empty states, error handling

@@ -63,3 +63,82 @@ export async function downloadBackup(file: BackupFile): Promise<SaveResult> {
 
   return { filename, shared: false };
 }
+
+function pngFilename(holidayName: string): string {
+  const slug = holidayName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 40);
+  return `kidrota-${slug || 'plan'}.png`;
+}
+
+/**
+ * Turn part of the screen into a PNG and hand it to the share sheet.
+ *
+ * Rendered at twice the screen scale, because the grid's carer labels are 10px
+ * and a 1x capture of them is unreadable once WhatsApp has compressed it.
+ */
+export async function shareElementAsImage(
+  element: HTMLElement,
+  holidayName: string,
+): Promise<SaveResult> {
+  const { toPng } = await import('html-to-image');
+  const filename = pngFilename(holidayName);
+
+  const dataUrl = await toPng(element, {
+    pixelRatio: 2,
+    // The capture has no page behind it, so it needs its own background.
+    backgroundColor: getComputedStyle(document.body).backgroundColor,
+    // A horizontally scrolled grid should share the whole week, not the
+    // portion that happens to be on screen.
+    width: element.scrollWidth,
+    style: { overflow: 'visible' },
+  });
+
+  if (Capacitor.isNativePlatform()) {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    const { Share } = await import('@capacitor/share');
+
+    const written = await Filesystem.writeFile({
+      path: filename,
+      // writeFile wants base64 without the data-URL prefix.
+      data: dataUrl.split(',')[1],
+      directory: Directory.Cache,
+    });
+
+    await Share.share({
+      title: holidayName,
+      text: `${holidayName} — who has the kids`,
+      url: written.uri,
+      dialogTitle: 'Share this week',
+    });
+
+    return { filename, shared: true };
+  }
+
+  const link = document.createElement('a');
+  link.href = dataUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  return { filename, shared: false };
+}
+
+/** Share a plan code as plain text, or copy it when there is no share sheet. */
+export async function sharePlanCode(code: string, holidayName: string): Promise<'shared' | 'copied'> {
+  if (Capacitor.isNativePlatform()) {
+    const { Share } = await import('@capacitor/share');
+    await Share.share({
+      title: holidayName,
+      text: `${holidayName} — open this in KidRota to load the plan:\n\n${code}`,
+      dialogTitle: 'Send the plan',
+    });
+    return 'shared';
+  }
+
+  await navigator.clipboard.writeText(code);
+  return 'copied';
+}

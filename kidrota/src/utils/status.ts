@@ -63,3 +63,8 @@ export function suggestShortName(name: string): string {
 export function formatCost(cost: number): string {
   return `£${cost.toFixed(2).replace(/\.00$/, '')}/day`;
 }
+
+/** "1 child" / "3 children" — count with a correctly inflected noun. */
+export function plural(count: number, singular: string, pluralForm: string): string {
+  return `${count} ${count === 1 ? singular : pluralForm}`;
+}

@@ -1617,3 +1617,32 @@ button {
 .back-button:active {
   background: var(--accent-bg);
 }
+
+/* ============================================================
+   Sharing
+   ============================================================ */
+
+/* The region captured when sharing the week as a picture. */
+.shareable {
+  background: var(--bg);
+}
+
+.shareable__caption {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+}
+
+.share-status {
+  margin-top: 14px;
+  margin-bottom: 0;
+}
+
+.code-input {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+  word-break: break-all;
+}
