@@ -1,0 +1,479 @@
+<title>App Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..750&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a production line. Stations strip on top (summary), then one column per stage (the board), editor slides in from the right. */
+:root{
+  --bg:#EDF0F3; --surface:#FFFFFF; --sunk:#E2E7ED; --ink:#15202B; --muted:#5A6777; --line:#D1D8E0;
+  --accent:#2446C8; --accent-ink:#FFFFFF; --amber:#A86400; --amber-bg:#FFF3DC; --danger:#B42318; --danger-bg:#FDECEA;
+  --s-idea:#7B879A; --s-build:#2D6BD6; --s-test:#7C4DDB; --s-launch:#C26A00; --s-live:#17803D; --s-paused:#9AA3AE;
+  --shadow:0 1px 2px rgba(21,32,43,.06),0 4px 14px rgba(21,32,43,.06);
+  --f-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E141B; --surface:#161F29; --sunk:#1D2833; --ink:#E4E9EF; --muted:#91A0B1; --line:#2A3644;
+  --accent:#7D9BFF; --accent-ink:#0E141B; --amber:#F2B451; --amber-bg:#3A2A10; --danger:#FF8A80; --danger-bg:#3B1A18;
+  --s-idea:#98A3B4; --s-build:#5F95F2; --s-test:#A584F2; --s-launch:#F0A23B; --s-live:#3FBF6A; --s-paused:#6E7884;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E141B; --surface:#161F29; --sunk:#1D2833; --ink:#E4E9EF; --muted:#91A0B1; --line:#2A3644;
+  --accent:#7D9BFF; --accent-ink:#0E141B; --amber:#F2B451; --amber-bg:#3A2A10; --danger:#FF8A80; --danger-bg:#3B1A18;
+  --s-idea:#98A3B4; --s-build:#5F95F2; --s-test:#A584F2; --s-launch:#F0A23B; --s-live:#3FBF6A; --s-paused:#6E7884;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+.wrap{max-width:1500px;margin:0 auto;padding-inline:20px;padding-block:24px 64px;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.top h1{font-size:clamp(28px,4vw,40px);font-weight:720;line-height:1}
+.top p{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--danger);border-color:transparent;background:transparent}
+.btn.danger.armed{background:var(--danger);color:#fff;border-color:var(--danger)}
+.btn:disabled{opacity:.55;cursor:default}
+
+/* stations strip */
+.line{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) auto;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.station{padding:14px 16px;position:relative;display:flex;flex-direction:column;gap:4px;min-width:0}
+.station+.station{border-left:1px solid var(--line)}
+.station .n{font-family:var(--f-display);font-size:30px;font-weight:700;line-height:1}
+.station .nm{display:flex;align-items:center;gap:6px;font-weight:600}
+.station .h{color:var(--muted);font-size:12px}
+.station .meter{height:4px;border-radius:2px;background:var(--sunk);margin-top:6px;overflow:hidden}
+.station .meter i{display:block;height:100%;background:var(--c)}
+.station.paused{background:var(--sunk);min-width:120px}
+.station:not(.paused):not(:nth-child(5))::after{content:"";position:absolute;right:-7px;top:50%;width:12px;height:12px;background:var(--surface);border-top:1px solid var(--line);border-right:1px solid var(--line);transform:translateY(-50%) rotate(45deg);z-index:1}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
+
+/* attention */
+.attn{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.attn .label{margin-right:4px}
+.flag{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px 4px 8px;cursor:pointer;font-size:13px}
+.flag b{font-weight:600}
+.flag .why{color:var(--amber);font-size:12px}
+.flag:hover{border-color:var(--amber)}
+
+/* toolbar */
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.search{flex:1 1 220px;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 12px}
+.sel{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+/* board */
+.board-scroll{overflow-x:auto;padding-bottom:6px}
+.board{display:grid;grid-template-columns:repeat(6,minmax(250px,1fr));gap:12px;min-width:1560px}
+.col{background:var(--sunk);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:10px;min-height:160px;border:2px solid transparent;transition:border-color .15s}
+.col.over{border-color:var(--c)}
+.col-h{display:flex;align-items:center;gap:8px;padding:2px 4px}
+.col-h h2{font-size:15px;font-weight:650}
+.col-h .ct{margin-left:auto;color:var(--muted)}
+.col-empty{color:var(--muted);font-size:13px;text-align:center;padding:18px 8px;border:1px dashed var(--line);border-radius:8px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:9px;cursor:pointer;box-shadow:var(--shadow);border-top:3px solid var(--c);min-width:0}
+.card:hover{border-color:var(--muted);border-top-color:var(--c)}
+.card.dragging{opacity:.45}
+.card-t{display:flex;align-items:flex-start;gap:8px;justify-content:space-between}
+.card h3{font-size:16px;font-weight:650;line-height:1.2;overflow-wrap:anywhere}
+.kind{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 6px;white-space:nowrap;flex:none}
+.desc{margin:0;color:var(--muted);font-size:13px}
+.prog{display:flex;align-items:center;gap:8px}
+.track{flex:1;height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
+.track i{display:block;height:100%;border-radius:3px;background:var(--c)}
+.pct{font-size:12px;color:var(--muted);min-width:3.2em;text-align:right}
+.next{margin:0;font-size:13px;background:var(--amber-bg);border-radius:6px;padding:6px 8px;overflow-wrap:anywhere}
+.next b{color:var(--amber);font-weight:600;margin-right:4px}
+.next.none{background:transparent;border:1px dashed var(--line);color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:6px;padding:2px 7px 2px 3px;font-size:12px;text-decoration:none;color:var(--ink);background:var(--surface);max-width:100%}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip .pk{font-family:var(--f-mono);font-size:10px;font-weight:500;background:var(--sunk);border-radius:4px;padding:1px 4px;color:var(--muted)}
+.chip span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-f{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}
+.stale{color:var(--amber);font-weight:500}
+.review{font-size:11px;color:var(--accent);font-weight:600}
+
+/* list */
+.tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:880px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;background:var(--sunk)}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--sunk)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;white-space:nowrap}
+
+/* states */
+.state{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:40px 24px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.state h2{font-size:22px}
+.state p{margin:0;color:var(--muted);max-width:52ch}
+
+/* editor */
+.scrim{position:fixed;inset:0;background:rgba(10,16,24,.45);z-index:20}
+.panel{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--bg);z-index:21;display:flex;flex-direction:column;box-shadow:-10px 0 30px rgba(0,0,0,.18);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line);background:var(--surface)}
+.panel-h h2{font-size:20px}
+.x{border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;padding:4px 8px;color:var(--muted)}
+.panel-b{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+.panel-f{display:flex;gap:8px;align-items:center;padding:12px 20px;border-top:1px solid var(--line);background:var(--surface)}
+.panel-f .sp{flex:1}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fld input[type=text],.fld input[type=url],.fld select,.fld textarea{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px;width:100%}
+.fld textarea{min-height:80px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.rng{display:flex;align-items:center;gap:10px}
+.rng input{flex:1;accent-color:var(--accent)}
+.sec{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:14px}
+.sec-h{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.lrow{display:grid;grid-template-columns:150px 1fr auto;gap:6px}
+.crow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+.crow input[type=checkbox]{width:17px;height:17px;accent-color:var(--s-live)}
+.lrow input,.lrow select,.crow input[type=text]{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 9px;min-width:0;width:100%}
+.rm{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:18px;padding:0 6px}
+.rm:hover{color:var(--danger)}
+.link-btn{border:0;background:transparent;color:var(--accent);cursor:pointer;padding:2px 0;font-weight:500}
+.hint{color:var(--muted);font-size:12px;margin:0}
+.err{color:var(--danger);font-size:13px;margin:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;z-index:30;font-weight:500}
+
+@media (max-width:860px){
+  .line{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .station:nth-child(3n+1){border-left:0}
+  .station:nth-child(n+4){border-top:1px solid var(--line)}
+  .station::after{display:none}
+  .board{grid-template-columns:1fr;min-width:0}
+  .board-scroll{overflow-x:visible}
+}
+@media (max-width:480px){
+  .wrap{padding-inline:16px}
+  .row2{grid-template-columns:1fr}
+  .lrow{grid-template-columns:1fr auto}
+  .lrow select{grid-column:1 / -1}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>App Pipeline</h1>
+      <p>Every app on one production line. Each card holds its stage, progress, next step and links to GitHub, Supabase, Vercel, Resend, Play Console and the rest.</p>
+    </div>
+    <button class="btn primary" id="addBtn" type="button">+ Add app</button>
+  </header>
+
+  <section class="line" id="stations" aria-label="Apps per stage"></section>
+  <section class="attn" id="attn" hidden></section>
+
+  <div class="bar">
+    <input class="search" id="q" type="search" placeholder="Search apps, notes, next steps" aria-label="Search apps">
+    <select class="sel" id="plat" aria-label="Filter by platform"></select>
+    <div class="seg" role="group" aria-label="View">
+      <button type="button" id="vBoard" aria-pressed="true">Board</button>
+      <button type="button" id="vList" aria-pressed="false">List</button>
+    </div>
+  </div>
+
+  <main id="main">
+    <div class="state" id="loading"><h2>Loading your apps…</h2><p>Your pipeline is stored with this page in your claude.ai account.</p></div>
+  </main>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="panel" id="panel" hidden aria-labelledby="pTitle" role="dialog" aria-modal="true">
+  <div class="panel-h"><h2 id="pTitle">Edit app</h2><button class="x" id="pClose" type="button" aria-label="Close">×</button></div>
+  <form class="panel-b" id="form" autocomplete="off">
+    <div class="fld"><label class="label" for="f-name">Name</label><input type="text" id="f-name" required maxlength="80"></div>
+    <div class="fld"><label class="label" for="f-desc">One-line description</label><input type="text" id="f-desc" maxlength="140" placeholder="What it does, for whom"></div>
+    <div class="row2">
+      <div class="fld"><label class="label" for="f-kind">Type</label><select id="f-kind"></select></div>
+      <div class="fld"><label class="label" for="f-stage">Stage</label><select id="f-stage"></select></div>
+    </div>
+    <div class="fld"><label class="label" for="f-progress">Progress to launch</label>
+      <div class="rng"><input type="range" id="f-progress" min="0" max="100" step="5"><output class="mono" id="f-progress-o" for="f-progress">0%</output></div></div>
+    <div class="fld" id="trackFld"><label class="label" for="f-track">Google Play track</label><select id="f-track"></select></div>
+    <div class="fld"><label class="label" for="f-next">Next step</label><input type="text" id="f-next" maxlength="160" placeholder="The one thing to do next time you open it"></div>
+
+    <div class="sec">
+      <div class="sec-h"><span class="label">Platforms &amp; links</span><button class="link-btn" type="button" id="addLink">+ Add link</button></div>
+      <div id="links" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><span class="label">Launch checklist</span>
+        <span style="display:flex;gap:14px"><button class="link-btn" type="button" id="addStd">Add standard items</button><button class="link-btn" type="button" id="addItem">+ Add item</button></span></div>
+      <div id="checks" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
+    <div class="fld sec"><label class="label" for="f-notes">Notes</label><textarea id="f-notes" placeholder="Env vars to remember, API keys location, ideas, blockers"></textarea></div>
+    <p class="err" id="fErr" hidden></p>
+  </form>
+  <div class="panel-f">
+    <button class="btn danger" type="button" id="delBtn">Delete</button>
+    <span class="sp"></span>
+    <button class="btn" type="button" id="cancelBtn">Cancel</button>
+    <button class="btn primary" type="button" id="saveBtn">Save</button>
+  </div>
+</aside>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+const STAGES=[
+  {k:'idea',l:'Idea',h:'Sketching & scoping'},
+  {k:'build',l:'Building',h:'Writing the code'},
+  {k:'test',l:'Testing',h:'Beta testers & fixes'},
+  {k:'launch',l:'Launching',h:'Store review, domain, emails'},
+  {k:'live',l:'Live',h:'Out in the world'},
+  {k:'paused',l:'Paused',h:'Parked for now'}];
+const KINDS={web:'Web app',site:'Website',android:'Android app',ios:'iOS app',cross:'Android + iOS',tool:'Tool / utility'};
+const TRACKS={'':'Not on Play yet',internal:'Internal testing',closed:'Closed testing',open:'Open testing',production:'Production'};
+const PLATS=[
+  {k:'github',l:'GitHub',s:'GH'},{k:'supabase',l:'Supabase',s:'SB'},{k:'vercel',l:'Vercel',s:'VC'},
+  {k:'resend',l:'Resend',s:'RS'},{k:'play',l:'Play Console',s:'GP'},{k:'appstore',l:'App Store Connect',s:'AS'},
+  {k:'website',l:'Live site',s:'WWW'},{k:'domain',l:'Domain registrar',s:'DNS'},{k:'stripe',l:'Stripe',s:'$'},
+  {k:'firebase',l:'Firebase',s:'FB'},{k:'analytics',l:'Analytics',s:'AN'},{k:'other',l:'Other',s:'↗'}];
+const PL=Object.fromEntries(PLATS.map(p=>[p.k,p]));
+const STD={
+  web:['Repo on GitHub','Supabase project + RLS policies on every table','Production env vars set on Vercel','Custom domain connected','Resend sending domain verified (SPF + DKIM)','Auth emails tested end to end','Privacy policy page','Analytics added'],
+  android:['Play Console app created','Privacy policy URL','Store listing: icon, screenshots, feature graphic','Data safety form','Content rating questionnaire','Closed test: 12 testers for 14 days','Apply for production access','Signed release bundle (.aab) uploaded'],
+  ios:['App Store Connect record','Privacy policy URL','Screenshots for each device size','App privacy details','TestFlight beta','Submit for review']};
+STD.site=STD.web; STD.tool=STD.web.slice(0,4); STD.cross=[...STD.android,'App Store Connect record','TestFlight beta','Submit iOS build for review'];
+
+let db=null,canWrite=true,apps=[],loaded=false,view='board',q='',plat='',editing=null,delArmed=false;
+try{view=localStorage.getItem('ap-view')||'board'}catch(e){}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl=u=>{try{const x=new URL(u);return /^https?:$/.test(x.protocol)?x.href:''}catch(e){return ''}};
+const stg=k=>STAGES.find(s=>s.k===k)||STAGES[0];
+const cvar=k=>`--c:var(--s-${stg(k).k})`;
+function lastAct(a){const t=[a.updatedAt,a.lastPush].map(d=>Date.parse(d||'')).filter(n=>!isNaN(n));return t.length?Math.max(...t):null}
+function ago(ms){if(!ms)return 'No activity yet';const d=Math.floor((Date.now()-ms)/864e5);if(d<1)return 'Today';if(d===1)return 'Yesterday';if(d<45)return d+' days ago';if(d<365)return Math.round(d/30)+' months ago';return (d/365).toFixed(1).replace('.0','')+' years ago'}
+const isStale=a=>['build','test','launch'].includes(a.stage)&&(()=>{const m=lastAct(a);return !m||Date.now()-m>30*864e5})();
+const isActive=a=>['build','test','launch'].includes(a.stage);
+
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2200)}
+
+function filtered(){
+  const s=q.trim().toLowerCase();
+  return apps.filter(a=>{
+    if(plat&&!(a.links||[]).some(l=>l.platform===plat))return false;
+    if(!s)return true;
+    return [a.name,a.description,a.nextStep,a.notes,KINDS[a.kind]].join(' ').toLowerCase().includes(s);
+  }).sort((x,y)=>(lastAct(y)||0)-(lastAct(x)||0));
+}
+
+function renderStations(){
+  $('#stations').innerHTML=STAGES.map(s=>{
+    const list=apps.filter(a=>(a.stage||'idea')===s.k);
+    const avg=list.length?Math.round(list.reduce((n,a)=>n+(+a.progress||0),0)/list.length):0;
+    return `<div class="station ${s.k==='paused'?'paused':''}" style="--c:var(--s-${s.k})">
+      <span class="nm"><span class="dot"></span>${s.l}</span>
+      <span class="n mono">${list.length}</span>
+      <span class="h">${s.k==='paused'?s.h:(list.length?'Avg '+avg+'% to launch':s.h)}</span>
+      ${s.k!=='paused'?`<span class="meter"><i style="width:${avg}%"></i></span>`:''}
+    </div>`}).join('');
+}
+
+function renderAttn(){
+  const flags=[];
+  apps.forEach(a=>{
+    if(isStale(a))flags.push([a,'untouched '+ago(lastAct(a)).toLowerCase()]);
+    else if(isActive(a)&&!a.nextStep)flags.push([a,'no next step']);
+  });
+  const el=$('#attn');
+  if(!flags.length){el.hidden=true;return}
+  el.hidden=false;
+  el.innerHTML=`<span class="label">Needs a look</span>`+flags.map(([a,w])=>`<button type="button" class="flag" data-open="${esc(a.id)}" style="${cvar(a.stage)}"><span class="dot"></span><b>${esc(a.name)}</b><span class="why">${esc(w)}</span></button>`).join('');
+}
+
+function chips(a){
+  return (a.links||[]).map(l=>{const u=safeUrl(l.url),p=PL[l.platform]||PL.other;if(!u)return '';
+    return `<a class="chip" href="${esc(u)}" target="_blank" rel="noopener" title="${esc(p.l)}: ${esc(u)}"><span class="pk">${esc(p.s)}</span><span>${esc(l.label||p.l)}</span></a>`}).join('');
+}
+
+function card(a){
+  const p=Math.max(0,Math.min(100,+a.progress||0)),ch=a.checklist||[],done=ch.filter(c=>c.done).length;
+  const showTrack=['android','cross'].includes(a.kind)&&a.playTrack;
+  return `<article class="card" draggable="${canWrite}" data-id="${esc(a.id)}" style="${cvar(a.stage)}" tabindex="0" aria-label="${esc(a.name)}">
+    <div class="card-t"><h3>${esc(a.name)}</h3>${a.kind?`<span class="kind">${esc(KINDS[a.kind]||a.kind)}</span>`:''}</div>
+    ${a.description?`<p class="desc">${esc(a.description)}</p>`:''}
+    <div class="prog"><div class="track"><i style="width:${p}%"></i></div><span class="pct mono">${p}%</span></div>
+    ${a.nextStep?`<p class="next"><b>Next</b>${esc(a.nextStep)}</p>`:`<p class="next none">No next step set</p>`}
+    ${(a.links||[]).length?`<div class="chips">${chips(a)}</div>`:''}
+    <div class="card-f"><span class="${isStale(a)?'stale':''}">${ago(lastAct(a))}</span>
+      ${showTrack?`<span>Play: ${esc(TRACKS[a.playTrack])}</span>`:''}
+      ${ch.length?`<span class="mono">✓ ${done}/${ch.length}</span>`:''}
+      ${a.imported?`<span class="review">Imported, needs review</span>`:''}</div>
+  </article>`;
+}
+
+function renderBoard(list){
+  return `<div class="board-scroll"><div class="board">${STAGES.map(s=>{
+    const items=list.filter(a=>(a.stage||'idea')===s.k);
+    return `<section class="col" data-stage="${s.k}" style="--c:var(--s-${s.k})">
+      <div class="col-h"><span class="dot"></span><h2>${s.l}</h2><span class="ct mono">${items.length}</span></div>
+      ${items.map(card).join('')||`<div class="col-empty">${canWrite?'Drag an app here':'Nothing here'}</div>`}
+    </section>`}).join('')}</div></div>`;
+}
+
+function renderList(list){
+  return `<div class="tbl-wrap"><table><thead><tr><th>App</th><th>Stage</th><th>Progress</th><th>Next step</th><th>Platforms</th><th>Last activity</th></tr></thead><tbody>${list.map(a=>{
+    const p=+a.progress||0,s=stg(a.stage);
+    return `<tr data-open="${esc(a.id)}" style="--c:var(--s-${s.k})"><td><b>${esc(a.name)}</b><br><span class="hint">${esc(KINDS[a.kind]||'')}</span></td>
+      <td><span class="pill"><span class="dot"></span>${s.l}</span></td>
+      <td style="min-width:120px"><div class="prog"><div class="track"><i style="width:${p}%"></i></div><span class="pct mono">${p}%</span></div></td>
+      <td>${esc(a.nextStep||'—')}</td><td><div class="chips">${chips(a)}</div></td>
+      <td class="${isStale(a)?'stale':''}" style="white-space:nowrap">${ago(lastAct(a))}</td></tr>`}).join('')}</tbody></table></div>`;
+}
+
+function render(){
+  renderStations();renderAttn();
+  $('#vBoard').setAttribute('aria-pressed',view==='board');$('#vList').setAttribute('aria-pressed',view==='list');
+  $('#addBtn').hidden=!canWrite||!db;
+  const main=$('#main');
+  if(!loaded)return;
+  if(!apps.length){main.innerHTML=`<div class="state"><h2>No apps on the line yet</h2><p>Add your first app with its stage, next step and links to GitHub, Supabase, Vercel, Resend or Play Console. It appears here as a card you can drag between stages.</p>${canWrite?'<button class="btn primary" type="button" data-new>+ Add your first app</button>':''}</div>`;return}
+  const list=filtered();
+  if(!list.length){main.innerHTML=`<div class="state"><h2>No apps match</h2><p>Clear the search or pick “All platforms” to see everything.</p></div>`;return}
+  main.innerHTML=view==='board'?renderBoard(list):renderList(list);
+}
+
+function showOffline(){
+  loaded=false;
+  $('#main').innerHTML=`<div class="state"><h2>Sign in to see your apps</h2><p>Your pipeline is saved in your claude.ai account. Open this page on claude.ai while signed in to view and edit it.</p></div>`;
+  $('#addBtn').hidden=true;
+}
+
+/* ---------- editor ---------- */
+function opts(sel,map,val){sel.innerHTML=Object.entries(map).map(([k,v])=>`<option value="${esc(k)}"${k===val?' selected':''}>${esc(v)}</option>`).join('')}
+function linkRow(l={platform:'github',url:'',label:''}){
+  const d=document.createElement('div');d.className='lrow';
+  d.innerHTML=`<select aria-label="Platform">${PLATS.map(p=>`<option value="${p.k}"${p.k===l.platform?' selected':''}>${esc(p.l)}</option>`).join('')}</select>
+    <input type="url" placeholder="https://…" aria-label="Link" value="${esc(l.url)}"><button type="button" class="rm" aria-label="Remove link">×</button>`;
+  d.dataset.label=l.label||'';
+  d.querySelector('.rm').onclick=()=>d.remove();
+  $('#links').appendChild(d);
+}
+function checkRow(c={text:'',done:false}){
+  const d=document.createElement('div');d.className='crow';
+  d.innerHTML=`<input type="checkbox" aria-label="Done"${c.done?' checked':''}><input type="text" value="${esc(c.text)}" aria-label="Checklist item"><button type="button" class="rm" aria-label="Remove item">×</button>`;
+  d.querySelector('.rm').onclick=()=>d.remove();
+  $('#checks').appendChild(d);
+}
+function syncTrack(){$('#trackFld').hidden=!['android','cross'].includes($('#f-kind').value)}
+
+function openEditor(a){
+  editing=a?{...a}:{stage:'idea',progress:0,kind:'web',links:[],checklist:[]};
+  delArmed=false;$('#delBtn').classList.remove('armed');$('#delBtn').textContent='Delete';
+  $('#pTitle').textContent=a?'Edit '+a.name:'Add an app';
+  $('#delBtn').hidden=!a;
+  $('#f-name').value=editing.name||'';$('#f-desc').value=editing.description||'';
+  opts($('#f-kind'),KINDS,editing.kind||'web');
+  opts($('#f-stage'),Object.fromEntries(STAGES.map(s=>[s.k,s.l])),editing.stage||'idea');
+  opts($('#f-track'),TRACKS,editing.playTrack||'');
+  $('#f-progress').value=+editing.progress||0;$('#f-progress-o').textContent=(+editing.progress||0)+'%';
+  $('#f-next').value=editing.nextStep||'';$('#f-notes').value=editing.notes||'';
+  $('#links').innerHTML='';(editing.links||[]).forEach(linkRow);
+  $('#checks').innerHTML='';(editing.checklist||[]).forEach(checkRow);
+  $('#fErr').hidden=true;syncTrack();
+  const ro=!canWrite;$('#form').querySelectorAll('input,select,textarea,button').forEach(e=>e.disabled=ro);
+  $('#saveBtn').hidden=ro;$('#delBtn').hidden=ro||!a;
+  $('#scrim').hidden=false;$('#panel').hidden=false;$('#f-name').focus();
+}
+function closeEditor(){$('#scrim').hidden=true;$('#panel').hidden=true;editing=null}
+
+function readForm(){
+  const links=[...$('#links').children].map(r=>({platform:r.querySelector('select').value,url:r.querySelector('input').value.trim(),label:r.dataset.label||''})).filter(l=>l.url);
+  const checklist=[...$('#checks').children].map(r=>({text:r.querySelector('input[type=text]').value.trim(),done:r.querySelector('input[type=checkbox]').checked})).filter(c=>c.text);
+  return {name:$('#f-name').value.trim(),description:$('#f-desc').value.trim(),kind:$('#f-kind').value,stage:$('#f-stage').value,
+    progress:+$('#f-progress').value,playTrack:$('#f-track').value,nextStep:$('#f-next').value.trim(),notes:$('#f-notes').value.trim(),links,checklist};
+}
+function showErr(m){const e=$('#fErr');e.textContent=m;e.hidden=false}
+
+async function save(){
+  if(!db||!editing)return;
+  const f=readForm();
+  if(!f.name){showErr('Give the app a name before saving.');$('#f-name').focus();return}
+  const bad=f.links.find(l=>!safeUrl(l.url));
+  if(bad){showErr('This link needs to start with https:// — '+bad.url);return}
+  const {id,...prev}=editing;delete prev.imported;
+  const body={...prev,...f,updatedAt:new Date().toISOString()};
+  if(!body.createdAt)body.createdAt=body.updatedAt;
+  const btn=$('#saveBtn');btn.disabled=true;btn.textContent='Saving…';
+  try{
+    const ref=id?db.collection('apps').doc(id):db.collection('apps').doc();
+    await ref.set(body);closeEditor();toast('Saved '+body.name);
+  }catch(e){
+    showErr(e&&e.code==='quota_exceeded'?'Storage is full. Delete an app you no longer need, then save again.':'Could not save. Check your connection and try again.');
+  }finally{btn.disabled=false;btn.textContent='Save'}
+}
+async function del(){
+  if(!editing?.id)return;
+  if(!delArmed){delArmed=true;const b=$('#delBtn');b.classList.add('armed');b.textContent='Click again to delete';return}
+  const name=editing.name;
+  try{await db.collection('apps').doc(editing.id).delete();closeEditor();toast('Deleted '+name)}catch(e){showErr('Could not delete. Try again.')}
+}
+
+/* ---------- events ---------- */
+$('#addBtn').onclick=()=>openEditor(null);
+$('#pClose').onclick=closeEditor;$('#cancelBtn').onclick=closeEditor;$('#scrim').onclick=closeEditor;
+$('#saveBtn').onclick=save;$('#delBtn').onclick=del;
+$('#form').onsubmit=e=>{e.preventDefault();save()};
+$('#addLink').onclick=()=>linkRow();$('#addItem').onclick=()=>checkRow();
+$('#addStd').onclick=()=>{const have=new Set([...$('#checks').querySelectorAll('input[type=text]')].map(i=>i.value.trim().toLowerCase()));(STD[$('#f-kind').value]||STD.web).forEach(t=>{if(!have.has(t.toLowerCase()))checkRow({text:t,done:false})})};
+$('#f-kind').onchange=syncTrack;
+$('#f-progress').oninput=e=>$('#f-progress-o').textContent=e.target.value+'%';
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#panel').hidden)closeEditor()});
+$('#q').oninput=e=>{q=e.target.value;render()};
+$('#plat').innerHTML='<option value="">All platforms</option>'+PLATS.map(p=>`<option value="${p.k}">${esc(p.l)}</option>`).join('');
+$('#plat').onchange=e=>{plat=e.target.value;render()};
+const setView=v=>{view=v;try{localStorage.setItem('ap-view',v)}catch(e){}render()};
+$('#vBoard').onclick=()=>setView('board');$('#vList').onclick=()=>setView('list');
+
+document.addEventListener('click',e=>{
+  if(e.target.closest('a'))return;
+  if(e.target.closest('[data-new]')){openEditor(null);return}
+  const o=e.target.closest('[data-open]');if(o){const a=apps.find(x=>x.id===o.dataset.open);if(a)openEditor(a);return}
+  const c=e.target.closest('.card');if(c){const a=apps.find(x=>x.id===c.dataset.id);if(a)openEditor(a)}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList?.contains('card')){const a=apps.find(x=>x.id===e.target.dataset.id);if(a)openEditor(a)}});
+
+let dragId=null;
+document.addEventListener('dragstart',e=>{const c=e.target.closest?.('.card');if(!c||!canWrite)return;dragId=c.dataset.id;c.classList.add('dragging');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',dragId)}catch(_){}});
+document.addEventListener('dragend',e=>{e.target.closest?.('.card')?.classList.remove('dragging');document.querySelectorAll('.col.over').forEach(c=>c.classList.remove('over'))});
+document.addEventListener('dragover',e=>{const col=e.target.closest?.('.col');if(!col||!dragId)return;e.preventDefault();document.querySelectorAll('.col.over').forEach(c=>c!==col&&c.classList.remove('over'));col.classList.add('over')});
+document.addEventListener('drop',async e=>{
+  const col=e.target.closest?.('.col');if(!col||!dragId)return;e.preventDefault();col.classList.remove('over');
+  const id=dragId;dragId=null;const a=apps.find(x=>x.id===id),stage=col.dataset.stage;
+  if(!a||a.stage===stage||!db)return;
+  try{await db.collection('apps').doc(id).update({stage,updatedAt:new Date().toISOString()});toast(a.name+' moved to '+stg(stage).l)}
+  catch(err){toast('Could not move '+a.name+'. Try again.')}
+});
+
+/* ---------- boot ---------- */
+render();
+(async()=>{
+  let c=window.claude,tries=0;
+  while(!c?.use&&tries<30){await new Promise(r=>setTimeout(r,100));c=window.claude;tries++}
+  if(!c?.use){showOffline();return}
+  const [d,u]=await Promise.all([c.use('db'),c.use('user')]);
+  if(!d){showOffline();return}
+  db=d;
+  if(u){try{const w=await u.can('data.write');if(w===false)canWrite=false}catch(e){}}
+  db.collection('apps').onSnapshot(s=>{apps=s.docs.map(x=>({id:x.id,...x.data()}));loaded=true;render()},
+    ()=>{showOffline()});
+})();
+</script>
