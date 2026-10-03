@@ -147,6 +147,19 @@ tbody tr:hover{background:var(--sunk)}
 .link-btn{border:0;background:transparent;color:var(--accent);cursor:pointer;padding:2px 0;font-weight:500}
 .hint{color:var(--muted);font-size:12px;margin:0}
 .err{color:var(--danger);font-size:13px;margin:0}
+.live{display:flex;flex-direction:column;gap:4px;font-size:12px;background:var(--sunk);border-radius:6px;padding:7px 8px;min-width:0}
+.live-h{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.live-h .pulse{width:7px;height:7px;border-radius:50%;background:var(--s-live);flex:none}
+.live-h.off .pulse{background:var(--muted)}
+.live a{color:var(--ink);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.live a:hover{color:var(--accent)}
+.live-n{display:flex;flex-wrap:wrap;gap:10px}
+.live-n a{display:inline;color:var(--muted)}
+.live-n .hot{color:var(--accent);font-weight:600}
+.ghbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;font-size:13px;color:var(--muted)}
+.ghbar .pulse{width:8px;height:8px;border-radius:50%;background:var(--s-live);display:inline-block;margin-right:6px}
+.ghbar.warn{background:var(--amber-bg);color:var(--ink);border-radius:8px;padding:8px 12px}
+.ghbar.warn .pulse{background:var(--amber)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;z-index:30;font-weight:500}
 
 @media (max-width:860px){
@@ -176,6 +189,7 @@ tbody tr:hover{background:var(--sunk)}
   </header>
 
   <section class="line" id="stations" aria-label="Apps per stage"></section>
+  <div class="ghbar" id="ghbar" hidden></div>
   <section class="attn" id="attn" hidden></section>
 
   <div class="bar">
@@ -259,7 +273,73 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const safeUrl=u=>{try{const x=new URL(u);return /^https?:$/.test(x.protocol)?x.href:''}catch(e){return ''}};
 const stg=k=>STAGES.find(s=>s.k===k)||STAGES[0];
 const cvar=k=>`--c:var(--s-${stg(k).k})`;
-function lastAct(a){const t=[a.updatedAt,a.lastPush].map(d=>Date.parse(d||'')).filter(n=>!isNaN(n));return t.length?Math.max(...t):null}
+/* ---------- live GitHub ---------- */
+const GH='GitHub',AUTHZ=['needs_reauth','server_not_connected','selection_required','not_in_manifest','blocked_by_policy','approval_required','not_granted','capability_disabled','capability_removed'];
+let mcp=null,live={},watches=new Map(),ghErr=null,ghAt=0;
+function repoOf(a){
+  for(const l of a.links||[]){if(l.platform!=='github')continue;
+    const m=/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/i.exec(l.url||'');
+    if(m)return {owner:m[1],repo:m[2].replace(/\.git$/,''),key:(m[1]+'/'+m[2].replace(/\.git$/,'')).toLowerCase()}}
+  return null;
+}
+function onLive(key,part,ev){
+  const L=live[key]||(live[key]={});
+  if(ev.type==='data'){
+    const p=ev.result.payload;L.err=null;
+    if(part==='commit'){const c=Array.isArray(p)?p[0]:null;L.commit=c?{msg:String(c.commit?.message||'').split('\n')[0],date:c.commit?.committer?.date||c.commit?.author?.date,url:c.html_url}:{none:true}}
+    if(part==='prs')L.prs=Array.isArray(p)?p.length:null;
+    if(part==='issues')L.issues=typeof p?.totalCount==='number'?p.totalCount:(Array.isArray(p?.issues)?p.issues.length:null);
+    ghAt=Math.max(ghAt,ev.result.cache?.storedAt||Date.now());
+    if(ghErr&&ghErr!=='partial')ghErr=null;
+  }else{
+    const code=ev.error?.code;
+    if(AUTHZ.includes(code)){ghErr=code;live={};}
+    else if(code==='tool_error'){L.err='Could not read this repo on GitHub. Check the link is right.'}
+    /* transient codes keep last good data */
+  }
+  scheduleRender();
+}
+let rT=0;function scheduleRender(){clearTimeout(rT);rT=setTimeout(render,60)}
+function syncWatches(){
+  if(!mcp)return;
+  const want=new Map();apps.forEach(a=>{const r=repoOf(a);if(r)want.set(r.key,r)});
+  for(const [k,uns] of watches){if(!want.has(k)){uns.forEach(u=>u());watches.delete(k);delete live[k]}}
+  const opt={cache:{staleTime:60000,gcTime:3600000},refetchInterval:600000};
+  for(const [k,r] of want){if(watches.has(k))continue;
+    const base={owner:r.owner,repo:r.repo};
+    watches.set(k,[
+      mcp.watchTool(GH,'list_commits',{...base,perPage:1,fields:['sha','html_url','commit']},ev=>onLive(k,'commit',ev),opt),
+      mcp.watchTool(GH,'list_pull_requests',{...base,state:'open',perPage:100,fields:['number']},ev=>onLive(k,'prs',ev),opt),
+      mcp.watchTool(GH,'list_issues',{...base,state:'OPEN',perPage:1,fields:['number']},ev=>onLive(k,'issues',ev),opt)]);
+  }
+}
+function liveOf(a){const r=repoOf(a);return r?live[r.key]:null}
+function renderGhBar(){
+  const el=$('#ghbar');
+  if(!mcp||!apps.some(repoOf)){el.hidden=true;return}
+  el.hidden=false;el.classList.toggle('warn',!!ghErr);
+  const msg={needs_reauth:'GitHub needs reconnecting. Go to claude.ai Settings → Connectors and reconnect GitHub.',
+    server_not_connected:'Add the GitHub connector in claude.ai Settings → Connectors to see live commits, pull requests and issues.',
+    selection_required:'You have more than one GitHub connector. Pick one when claude.ai asks, then reload.',
+    not_in_manifest:'GitHub is turned off for this page. Turn it on from the page’s Permissions menu to see live status.',
+    blocked_by_policy:'Your organisation blocks GitHub for this page.',approval_required:'GitHub calls need approval that pages cannot ask for yet.'}[ghErr];
+  if(ghErr){el.innerHTML=`<span><span class="pulse"></span>${esc(msg||'Live GitHub status is unavailable in this view.')}</span>`;return}
+  el.innerHTML=`<span><span class="pulse"></span>Live from GitHub${ghAt?' · updated '+esc(agoShort(ghAt)):' · loading…'}</span><button class="link-btn" type="button" id="ghRefresh">Refresh now</button>`;
+}
+function agoShort(ms){const m=Math.round((Date.now()-ms)/60000);return m<1?'just now':m<60?m+' min ago':Math.round(m/60)+' h ago'}
+function liveStrip(a){
+  const r=repoOf(a);if(!r||!mcp||ghErr)return '';
+  const L=live[r.key];const base='https://github.com/'+encodeURIComponent(r.owner)+'/'+encodeURIComponent(r.repo);
+  if(!L||(!L.commit&&!L.err))return `<div class="live"><span class="live-h off"><span class="pulse"></span>Checking GitHub…</span></div>`;
+  if(L.err)return `<div class="live"><span class="live-h off"><span class="pulse"></span>${esc(L.err)}</span></div>`;
+  const c=L.commit;
+  return `<div class="live"><span class="live-h"><span class="pulse"></span>${c.none?'No commits yet':'Last commit '+esc(ago(Date.parse(c.date)).toLowerCase())}</span>
+    ${c.none?'':`<a href="${esc(safeUrl(c.url))}" target="_blank" rel="noopener" title="${esc(c.msg)}">${esc(c.msg)}</a>`}
+    <span class="live-n">${L.prs!=null?`<a class="${L.prs?'hot':''}" href="${base}/pulls" target="_blank" rel="noopener">${L.prs} open PR${L.prs===1?'':'s'}</a>`:''}
+    ${L.issues!=null?`<a class="${L.issues?'hot':''}" href="${base}/issues" target="_blank" rel="noopener">${L.issues} open issue${L.issues===1?'':'s'}</a>`:''}</span></div>`;
+}
+
+function lastAct(a){const L=liveOf(a);const t=[a.updatedAt,a.lastPush,L?.commit?.date].map(d=>Date.parse(d||'')).filter(n=>!isNaN(n));return t.length?Math.max(...t):null}
 function ago(ms){if(!ms)return 'No activity yet';const d=Math.floor((Date.now()-ms)/864e5);if(d<1)return 'Today';if(d===1)return 'Yesterday';if(d<45)return d+' days ago';if(d<365)return Math.round(d/30)+' months ago';return (d/365).toFixed(1).replace('.0','')+' years ago'}
 const isStale=a=>['build','test','launch'].includes(a.stage)&&(()=>{const m=lastAct(a);return !m||Date.now()-m>30*864e5})();
 const isActive=a=>['build','test','launch'].includes(a.stage);
@@ -292,6 +372,7 @@ function renderAttn(){
   apps.forEach(a=>{
     if(isStale(a))flags.push([a,'untouched '+ago(lastAct(a)).toLowerCase()]);
     else if(isActive(a)&&!a.nextStep)flags.push([a,'no next step']);
+    const L=liveOf(a);if(L?.prs)flags.push([a,L.prs+' open PR'+(L.prs===1?'':'s')+' waiting']);
   });
   const el=$('#attn');
   if(!flags.length){el.hidden=true;return}
@@ -313,6 +394,7 @@ function card(a){
     <div class="prog"><div class="track"><i style="width:${p}%"></i></div><span class="pct mono">${p}%</span></div>
     ${a.nextStep?`<p class="next"><b>Next</b>${esc(a.nextStep)}</p>`:`<p class="next none">No next step set</p>`}
     ${(a.links||[]).length?`<div class="chips">${chips(a)}</div>`:''}
+    ${liveStrip(a)}
     <div class="card-f"><span class="${isStale(a)?'stale':''}">${ago(lastAct(a))}</span>
       ${showTrack?`<span>Play: ${esc(TRACKS[a.playTrack])}</span>`:''}
       ${ch.length?`<span class="mono">✓ ${done}/${ch.length}</span>`:''}
@@ -340,7 +422,7 @@ function renderList(list){
 }
 
 function render(){
-  renderStations();renderAttn();
+  renderStations();renderGhBar();renderAttn();
   $('#vBoard').setAttribute('aria-pressed',view==='board');$('#vList').setAttribute('aria-pressed',view==='list');
   $('#addBtn').hidden=!canWrite||!db;
   const main=$('#main');
@@ -445,6 +527,7 @@ $('#vBoard').onclick=()=>setView('board');$('#vList').onclick=()=>setView('list'
 
 document.addEventListener('click',e=>{
   if(e.target.closest('a'))return;
+  if(e.target.closest('#ghRefresh')){if(mcp){mcp.invalidate(GH).catch(()=>{});toast('Refreshing GitHub status')}return}
   if(e.target.closest('[data-new]')){openEditor(null);return}
   const o=e.target.closest('[data-open]');if(o){const a=apps.find(x=>x.id===o.dataset.open);if(a)openEditor(a);return}
   const c=e.target.closest('.card');if(c){const a=apps.find(x=>x.id===c.dataset.id);if(a)openEditor(a)}
@@ -469,11 +552,12 @@ render();
   let c=window.claude,tries=0;
   while(!c?.use&&tries<30){await new Promise(r=>setTimeout(r,100));c=window.claude;tries++}
   if(!c?.use){showOffline();return}
-  const [d,u]=await Promise.all([c.use('db'),c.use('user')]);
+  const [d,u,m]=await Promise.all([c.use('db'),c.use('user'),c.use('mcp')]);
+  mcp=m;
   if(!d){showOffline();return}
   db=d;
   if(u){try{const w=await u.can('data.write');if(w===false)canWrite=false}catch(e){}}
-  db.collection('apps').onSnapshot(s=>{apps=s.docs.map(x=>({id:x.id,...x.data()}));loaded=true;render()},
+  db.collection('apps').onSnapshot(s=>{apps=s.docs.map(x=>({id:x.id,...x.data()}));loaded=true;syncWatches();render()},
     ()=>{showOffline()});
 })();
 </script>
