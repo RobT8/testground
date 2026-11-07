@@ -14,6 +14,11 @@ class Prefs(context: Context) {
         get() = sp.getString("group", "") ?: ""
         set(v) = sp.edit().putString("group", v).apply()
 
+    /** The name of the person being woken (shown to carers throughout the app). */
+    var sleeperName: String
+        get() = sp.getString("sleeper_name", "") ?: ""
+        set(v) = sp.edit().putString("sleeper_name", v).apply()
+
     /** "carer" or "sleeper" */
     var role: String
         get() = sp.getString("role", "") ?: ""

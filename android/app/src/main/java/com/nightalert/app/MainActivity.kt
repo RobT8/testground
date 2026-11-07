@@ -38,6 +38,8 @@ class MainActivity : AppCompatActivity() {
             show(b.configError)
             return
         }
+        // Migrate phones set up before the person's name was a setup field.
+        if (prefs.isSetUp && prefs.sleeperName.isBlank()) prefs.sleeperName = Config.SLEEPER_NAME
         createConfirmChannel()
         wireSetup()
         route()
@@ -49,7 +51,7 @@ class MainActivity : AppCompatActivity() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         val ch = android.app.NotificationChannel(
             "confirm", "Check-in confirmations", android.app.NotificationManager.IMPORTANCE_HIGH
-        ).apply { description = "Tells you when ${Config.SLEEPER_NAME} has checked in." }
+        ).apply { description = "Tells you when someone has checked in." }
         nm.createNotificationChannel(ch)
     }
 
@@ -71,12 +73,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** The configured name of the person being woken (falls back for old installs). */
+    private fun sleeper(): String = prefs.sleeperName.ifBlank { Config.SLEEPER_NAME }
+
     // -------------------------------------------------------------------------
     //  SETUP
     // -------------------------------------------------------------------------
     private fun showSetup() {
         show(b.setupPanel)
         b.inputName.setText(prefs.name)
+        b.inputSleeper.setText(prefs.sleeperName)
         b.inputGroup.setText(prefs.group)
     }
 
@@ -89,11 +95,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun saveSetup(role: String) {
         val name = b.inputName.text.toString().trim()
+        val sleeper = b.inputSleeper.text.toString().trim()
         val group = Prefs.normalizeGroup(b.inputGroup.text.toString())
         if (name.isEmpty()) { setupErr("Please type your name."); return }
+        if (sleeper.isEmpty()) { setupErr("Please type the name of the person being woken."); return }
         if (group.isEmpty()) { setupErr("Please type your group code."); return }
         b.setupError.visibility = View.GONE
-        prefs.name = name; prefs.group = group; prefs.role = role
+        prefs.name = name; prefs.sleeperName = sleeper; prefs.group = group; prefs.role = role
         route()
     }
 
@@ -106,9 +114,9 @@ class MainActivity : AppCompatActivity() {
         stopRefresh()
         AlarmService.stop(this)
         Heartbeat.cancel(this)
-        val n = prefs.name; val g = prefs.group
+        val n = prefs.name; val g = prefs.group; val s = prefs.sleeperName
         prefs.clear()
-        prefs.name = n; prefs.group = g   // keep name/group, drop role + armed
+        prefs.name = n; prefs.group = g; prefs.sleeperName = s   // keep identity, drop role + armed
         showSetup()
     }
 
@@ -118,7 +126,8 @@ class MainActivity : AppCompatActivity() {
     private fun showCarer() {
         show(b.carerPanel)
         b.carerWho.text = "${prefs.name} · ${prefs.group}"
-        b.btnWake.text = "🔔  Alert ${Config.SLEEPER_NAME}"
+        b.btnWake.text = "🔔  Alert ${sleeper()}"
+        b.pingTitle.text = "Ping me when ${sleeper()} checks in"
 
         // Enrol this carer phone for the check-in ping (needs notifications).
         requestNotificationPermissionIfNeeded()
@@ -126,8 +135,10 @@ class MainActivity : AppCompatActivity() {
 
         // Off-duty toggle: when off, no check-in ping (in-app or push).
         b.switchPing.isChecked = !prefs.pingMuted
+        updatePingState(!prefs.pingMuted)
         b.switchPing.setOnCheckedChangeListener { _, checked ->
             prefs.pingMuted = !checked
+            updatePingState(checked)
             Fcm.registerToken(this)   // push the new muted state to the server
         }
 
@@ -144,24 +155,35 @@ class MainActivity : AppCompatActivity() {
         startRefresh { refreshCarer() }
     }
 
+    /** Reflect the ping toggle's state in plain words under the switch. */
+    private fun updatePingState(on: Boolean) {
+        if (on) {
+            b.pingState.text = "Currently ON — you'll be alerted when ${sleeper()} checks in"
+            b.pingState.setTextColor(ContextCompat.getColor(this, R.color.ok))
+        } else {
+            b.pingState.text = "Currently OFF — you won't be alerted when ${sleeper()} checks in"
+            b.pingState.setTextColor(ContextCompat.getColor(this, R.color.faint))
+        }
+    }
+
     private fun refreshCarer() {
         bg({ Pair(Supa.getActiveAlert(prefs.group), Supa.getRecent(prefs.group)) }) { (active, recent) ->
             if (active != null) {
                 val checking = isFuture(active.snoozedUntil)
                 if (checking) {
                     b.carerStatusEmoji.text = "🔎"
-                    b.carerStatusTitle.text = "${Config.SLEEPER_NAME} is awake, checking…"
+                    b.carerStatusTitle.text = "${sleeper()} is awake, checking…"
                     b.carerStatusDetail.text =
-                        "She's checking her levels now — you'll see ✅ when she confirms."
+                        "${sleeper()} is checking their levels now — you'll see ✅ when they confirm."
                 } else {
                     b.carerStatusEmoji.text = "🔔"
-                    b.carerStatusTitle.text = "${Config.SLEEPER_NAME} is being woken…"
+                    b.carerStatusTitle.text = "${sleeper()} is being woken…"
                     val who = active.requesters().joinToString(", ")
                     b.carerStatusDetail.text =
-                        "Alarm sent by $who at ${fmt(active.createdAt)}. Waiting for ${Config.SLEEPER_NAME} to check in."
+                        "Alarm sent by $who at ${fmt(active.createdAt)}. Waiting for ${sleeper()} to check in."
                 }
                 b.btnWake.isEnabled = false
-                b.btnWake.text = if (checking) "She's checking…" else "Alarm is ringing…"
+                b.btnWake.text = if (checking) "Checking…" else "Alarm is ringing…"
                 b.btnCancel.visibility = View.VISIBLE
                 carerActiveId = active.id   // remember what we're waiting on
             } else {
@@ -176,7 +198,7 @@ class MainActivity : AppCompatActivity() {
                 // Show the "checked in" banner only for 5 minutes, then go quiet.
                 if (last != null && last.status == "confirmed" && isWithinMinutes(last.confirmedAt, 5)) {
                     b.carerStatusEmoji.text = "✅"
-                    b.carerStatusTitle.text = "${Config.SLEEPER_NAME} has checked in"
+                    b.carerStatusTitle.text = "${sleeper()} has checked in"
                     val note = if (last.confirmedNote != null) "“${last.confirmedNote}” — " else ""
                     b.carerStatusDetail.text = "${note}confirmed at ${fmt(last.confirmedAt)}."
                 } else {
@@ -185,7 +207,7 @@ class MainActivity : AppCompatActivity() {
                     b.carerStatusDetail.text = "No active alert right now."
                 }
                 b.btnWake.isEnabled = true
-                b.btnWake.text = "🔔  Alert ${Config.SLEEPER_NAME}"
+                b.btnWake.text = "🔔  Alert ${sleeper()}"
                 b.btnCancel.visibility = View.GONE
             }
             b.carerLog.text = renderLog(recent)
@@ -300,7 +322,7 @@ class MainActivity : AppCompatActivity() {
         return rows.joinToString("\n") { r ->
             val who = r.requesters().joinToString(", ")
             when (r.status) {
-                "confirmed" -> "✅  ${Config.SLEEPER_NAME} checked in" +
+                "confirmed" -> "✅  ${sleeper()} checked in" +
                         (if (r.confirmedNote != null) " — ${r.confirmedNote}" else "") +
                         "  (${fmt(r.confirmedAt)})"
                 "cancelled" -> "⚪  Cancelled — false alarm  (${fmt(r.createdAt)})"

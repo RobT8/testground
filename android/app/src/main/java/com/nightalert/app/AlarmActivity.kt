@@ -114,9 +114,10 @@ class AlarmActivity : AppCompatActivity() {
 
         val id = alertId
         if (id != null) {
+            val by = prefs.sleeperName.ifBlank { Config.SLEEPER_NAME }
             Thread {
-                try { Supa.confirmAlert(id, note, Config.SLEEPER_NAME) } catch (_: Exception) {}
-                try { Supa.pushConfirmed(prefs.group, note, Config.SLEEPER_NAME) } catch (_: Exception) {}
+                try { Supa.confirmAlert(id, note, by) } catch (_: Exception) {}
+                try { Supa.pushConfirmed(prefs.group, note, by) } catch (_: Exception) {}
             }.start()
         }
 

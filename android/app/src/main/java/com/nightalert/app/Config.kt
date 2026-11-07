@@ -25,7 +25,9 @@ object Config {
     const val SUPABASE_URL = "https://zpesevmnmaifnooqiyrr.supabase.co"
     const val SUPABASE_ANON_KEY = "sb_publishable_5WdjrD77OFZANghegb_4-w_fR4d582z"
 
-    /** Cosmetic only — what the carers call the person being woken. */
+    /** Legacy fallback only. The person's name is now entered during onboarding
+     *  (Prefs.sleeperName); this value is used only for phones that were set up
+     *  before that field existed. */
     const val SLEEPER_NAME = "Mum"
 
     fun isConfigured(): Boolean =

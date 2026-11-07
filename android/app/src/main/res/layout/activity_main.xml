@@ -47,13 +47,23 @@
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="4dp" android:layout_marginBottom="20dp"
                 android:gravity="center"
-                android:text="Wake-up alerts &amp; check-in confirmations."
+                android:text="Loud wake-up alerts and check-in confirmations for the people you care for."
                 android:textColor="@color/muted" android:textSize="15sp"/>
 
             <TextView style="@style/FieldLabel" android:text="Your name"/>
             <EditText
                 android:id="@+id/inputName" style="@style/Field"
                 android:inputType="textPersonName" android:hint="e.g. Rob"/>
+
+            <TextView style="@style/FieldLabel" android:text="Who are we waking?"/>
+            <EditText
+                android:id="@+id/inputSleeper" style="@style/Field"
+                android:inputType="textPersonName" android:hint="their first name, e.g. Linda"/>
+            <TextView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="The person who gets the alarm and taps to check in. Everyone in the family enters the same name."
+                android:textColor="@color/muted" android:textSize="13sp"/>
 
             <TextView style="@style/FieldLabel" android:text="Family group code"/>
             <EditText
@@ -68,15 +78,15 @@
             <TextView
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="This phone is…"
+                android:text="Who is this phone for?"
                 android:textColor="@color/ink" android:textSize="16sp" android:textStyle="bold"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/roleSleeper" style="@style/RoleButton"
-                android:text="🛏️  Mum's phone\nThis phone rings &amp; shows the check-in button"/>
+                android:text="🛏️  The phone to be woken\nThis phone rings &amp; shows the check-in buttons"/>
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/roleCarer" style="@style/RoleButton"
-                android:text="📲  A carer's phone\nI send the alerts &amp; watch for the reply"/>
+                android:text="📲  A carer's phone\nI send the alerts &amp; see the reply"/>
 
             <TextView
                 android:id="@+id/setupError"
@@ -126,32 +136,44 @@
                 android:id="@+id/btnWake" style="@style/BigButton"
                 app:backgroundTint="@color/danger"
                 android:layout_marginTop="18dp"
-                android:text="🔔  Alert Mum"/>
+                android:text="🔔  Send alert"/>
 
             <Button android:id="@+id/btnCancel" style="@style/GhostButton"
                 android:text="Cancel this alert (false alarm)" android:visibility="gone"/>
 
             <LinearLayout
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:gravity="center_vertical"
+                android:orientation="vertical"
                 android:layout_marginTop="18dp" android:padding="14dp"
                 android:background="@drawable/card">
                 <LinearLayout
-                    android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:orientation="vertical">
-                    <TextView
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <LinearLayout
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView
+                            android:id="@+id/pingTitle"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Ping me when they check in"
+                            android:textColor="@color/ink" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Turn off when you're not on duty, so it won't wake you."
+                            android:textColor="@color/muted" android:textSize="13sp"/>
+                    </LinearLayout>
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchPing"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Ping me when Mum checks in"
-                        android:textColor="@color/ink" android:textSize="16sp" android:textStyle="bold"/>
-                    <TextView
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Turn off when you're not on duty, so it won't wake you."
-                        android:textColor="@color/muted" android:textSize="13sp"/>
+                        android:checked="true"/>
                 </LinearLayout>
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchPing"
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:checked="true"/>
+                <TextView
+                    android:id="@+id/pingState"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Currently ON"
+                    android:textStyle="bold" android:textSize="15sp"
+                    android:textColor="@color/ok"/>
             </LinearLayout>
 
             <TextView
