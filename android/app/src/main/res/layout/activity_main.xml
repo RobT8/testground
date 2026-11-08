@@ -41,59 +41,124 @@
             <TextView
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:text="🔔 Night Alert" android:textSize="28sp"
+                android:text="🔔 Night Alert" android:textSize="26sp"
                 android:textStyle="bold" android:textColor="@color/ink"/>
+
             <TextView
+                android:id="@+id/stepIndicator"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="4dp" android:layout_marginBottom="20dp"
-                android:gravity="center"
-                android:text="Loud wake-up alerts and check-in confirmations for the people you care for."
-                android:textColor="@color/muted" android:textSize="15sp"/>
+                android:layout_marginTop="22dp"
+                android:text="STEP 1 OF 3"
+                android:textColor="@color/faint" android:textSize="13sp"
+                android:textStyle="bold" android:letterSpacing="0.12"/>
 
-            <TextView style="@style/FieldLabel" android:text="Your name"/>
-            <EditText
-                android:id="@+id/inputName" style="@style/Field"
-                android:inputType="textPersonName" android:hint="e.g. Rob"/>
-
-            <TextView style="@style/FieldLabel" android:text="Who are we waking?"/>
-            <EditText
-                android:id="@+id/inputSleeper" style="@style/Field"
-                android:inputType="textPersonName" android:hint="their first name, e.g. Linda"/>
-            <TextView
+            <!-- ---- Step: your name ---- -->
+            <LinearLayout android:id="@+id/stepName"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="The person who gets the alarm and taps to check in. Everyone in the family enters the same name."
-                android:textColor="@color/muted" android:textSize="13sp"/>
+                android:orientation="vertical" android:layout_marginTop="8dp">
+                <TextView
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="What's your name?"
+                    android:textColor="@color/ink" android:textSize="23sp" android:textStyle="bold"/>
+                <TextView
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Shown to the family so they know who sent an alert."
+                    android:textColor="@color/muted" android:textSize="15sp"/>
+                <EditText
+                    android:id="@+id/inputName" style="@style/Field"
+                    android:layout_marginTop="18dp"
+                    android:inputType="textPersonName" android:hint="e.g. Rob"/>
+            </LinearLayout>
 
-            <TextView style="@style/FieldLabel" android:text="Family group code"/>
-            <EditText
-                android:id="@+id/inputGroup" style="@style/Field"
-                android:inputType="textCapCharacters" android:hint="e.g. SMITH-NIGHT"/>
-            <TextView
+            <!-- ---- Step: who is this phone for ---- -->
+            <LinearLayout android:id="@+id/stepRole"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Everyone in the family types the SAME code. Pick something only you know."
-                android:textColor="@color/muted" android:textSize="13sp"/>
+                android:orientation="vertical" android:layout_marginTop="8dp"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="Who is this phone for?"
+                    android:textColor="@color/ink" android:textSize="23sp" android:textStyle="bold"/>
+                <TextView
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Tap the one that describes this phone."
+                    android:textColor="@color/muted" android:textSize="15sp"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/roleSleeper" style="@style/RoleButton"
+                    android:layout_marginTop="18dp"
+                    android:text="🛏️  I am to be woken up\nThis phone rings &amp; shows my check-in buttons"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/roleCarer" style="@style/RoleButton"
+                    android:text="📲  I am a carer\nI send the alerts &amp; see the reply"/>
+            </LinearLayout>
 
-            <TextView
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:text="Who is this phone for?"
-                android:textColor="@color/ink" android:textSize="16sp" android:textStyle="bold"/>
+            <!-- ---- Step: who are you helping (carer only) ---- -->
+            <LinearLayout android:id="@+id/stepSleeper"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:layout_marginTop="8dp"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="Who are you helping?"
+                    android:textColor="@color/ink" android:textSize="23sp" android:textStyle="bold"/>
+                <TextView
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="The person who gets woken and checks in. Their first name is enough."
+                    android:textColor="@color/muted" android:textSize="15sp"/>
+                <EditText
+                    android:id="@+id/inputSleeper" style="@style/Field"
+                    android:layout_marginTop="18dp"
+                    android:inputType="textPersonName" android:hint="e.g. Linda"/>
+            </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/roleSleeper" style="@style/RoleButton"
-                android:text="🛏️  The phone to be woken\nThis phone rings &amp; shows the check-in buttons"/>
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/roleCarer" style="@style/RoleButton"
-                android:text="📲  A carer's phone\nI send the alerts &amp; see the reply"/>
+            <!-- ---- Step: family group code ---- -->
+            <LinearLayout android:id="@+id/stepGroup"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:layout_marginTop="8dp"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="Family group code"
+                    android:textColor="@color/ink" android:textSize="23sp" android:textStyle="bold"/>
+                <TextView
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Everyone in the family enters the SAME code so your phones are linked. Pick something only you know."
+                    android:textColor="@color/muted" android:textSize="15sp"/>
+                <EditText
+                    android:id="@+id/inputGroup" style="@style/Field"
+                    android:layout_marginTop="18dp"
+                    android:inputType="textCapCharacters" android:hint="e.g. SMITH-NIGHT"/>
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/setupError"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="12dp"
                 android:textColor="@color/danger" android:textSize="14sp"
                 android:visibility="gone"/>
+
+            <!-- ---- Wizard navigation ---- -->
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginTop="28dp">
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBack" style="@style/GhostButton"
+                    android:layout_width="wrap_content"
+                    android:text="Back" android:visibility="invisible"/>
+                <View android:layout_width="0dp" android:layout_height="1dp"
+                    android:layout_weight="1"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnNext" style="@style/BigButton"
+                    android:layout_width="wrap_content"
+                    app:backgroundTint="@color/ok"
+                    android:paddingHorizontal="44dp"
+                    android:text="Next"/>
+            </LinearLayout>
         </LinearLayout>
 
         <!-- ============================ CARER ============================ -->
@@ -178,7 +243,7 @@
 
             <TextView
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="20dp" android:text="TONIGHT"
+                android:layout_marginTop="20dp" android:text="RECENT ACTIVITY"
                 android:textColor="@color/faint" android:textSize="13sp" android:letterSpacing="0.08"/>
             <TextView android:id="@+id/carerLog"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -250,7 +315,7 @@
 
                 <TextView
                     android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp" android:text="TONIGHT"
+                    android:layout_marginTop="20dp" android:text="RECENT ACTIVITY"
                     android:textColor="@color/faint" android:textSize="13sp" android:letterSpacing="0.08"/>
                 <TextView android:id="@+id/sleeperLog"
                     android:layout_width="match_parent" android:layout_height="wrap_content"

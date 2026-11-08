@@ -27,6 +27,8 @@ class MainActivity : AppCompatActivity() {
     private var refreshRunnable: Runnable? = null
     private var carerActiveId: String? = null   // alert this carer is waiting on
     private var carerPingedId: String? = null   // alert we've already pinged for
+    private var stepIdx = 0                      // onboarding wizard: current step
+    private var pendingRole = ""                 // "", "sleeper" or "carer"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,24 +86,78 @@ class MainActivity : AppCompatActivity() {
         b.inputName.setText(prefs.name)
         b.inputSleeper.setText(prefs.sleeperName)
         b.inputGroup.setText(prefs.group)
+        pendingRole = prefs.role          // "" on a fresh setup
+        stepIdx = 0
+        renderStep()
     }
 
     private fun wireSetup() {
-        b.roleSleeper.setOnClickListener { saveSetup("sleeper") }
-        b.roleCarer.setOnClickListener { saveSetup("carer") }
+        b.roleSleeper.setOnClickListener { selectRole("sleeper") }
+        b.roleCarer.setOnClickListener { selectRole("carer") }
+        b.btnNext.setOnClickListener { onNext() }
+        b.btnBack.setOnClickListener { onBack() }
         b.carerChange.setOnClickListener { resetIdentity() }
         b.sleeperChange.setOnClickListener { resetIdentity() }
     }
 
-    private fun saveSetup(role: String) {
-        val name = b.inputName.text.toString().trim()
-        val sleeper = b.inputSleeper.text.toString().trim()
-        val group = Prefs.normalizeGroup(b.inputGroup.text.toString())
-        if (name.isEmpty()) { setupErr("Please type your name."); return }
-        if (sleeper.isEmpty()) { setupErr("Please type the name of the person being woken."); return }
-        if (group.isEmpty()) { setupErr("Please type your group code."); return }
+    /** The ordered steps; the "who are you helping?" step only exists for carers. */
+    private fun steps(): List<String> =
+        if (pendingRole == "carer") listOf("name", "role", "sleeper", "group")
+        else listOf("name", "role", "group")
+
+    private fun renderStep() {
+        val s = steps()
+        stepIdx = stepIdx.coerceIn(0, s.size - 1)
+        val key = s[stepIdx]
+        b.stepName.visibility = if (key == "name") View.VISIBLE else View.GONE
+        b.stepRole.visibility = if (key == "role") View.VISIBLE else View.GONE
+        b.stepSleeper.visibility = if (key == "sleeper") View.VISIBLE else View.GONE
+        b.stepGroup.visibility = if (key == "group") View.VISIBLE else View.GONE
+        b.stepIndicator.text = "STEP ${stepIdx + 1} OF ${s.size}"
         b.setupError.visibility = View.GONE
-        prefs.name = name; prefs.sleeperName = sleeper; prefs.group = group; prefs.role = role
+        b.btnBack.visibility = if (stepIdx == 0) View.INVISIBLE else View.VISIBLE
+        // The role step advances when a role is tapped, so it has no Next button.
+        b.btnNext.visibility = if (key == "role") View.INVISIBLE else View.VISIBLE
+        b.btnNext.text = if (key == "group") "Finish" else "Next"
+    }
+
+    private fun selectRole(role: String) {
+        pendingRole = role
+        stepIdx = steps().indexOf("role") + 1   // step straight on to the next question
+        renderStep()
+    }
+
+    private fun onNext() {
+        val s = steps()
+        when (s[stepIdx]) {
+            "name" ->
+                if (b.inputName.text.toString().trim().isEmpty()) { setupErr("Please type your name."); return }
+            "sleeper" ->
+                if (b.inputSleeper.text.toString().trim().isEmpty()) { setupErr("Please type their name."); return }
+            "group" -> {
+                if (Prefs.normalizeGroup(b.inputGroup.text.toString()).isEmpty()) {
+                    setupErr("Please type your group code."); return
+                }
+                finishSetup(); return
+            }
+        }
+        stepIdx += 1
+        renderStep()
+    }
+
+    private fun onBack() {
+        if (stepIdx > 0) { stepIdx -= 1; renderStep() }
+    }
+
+    private fun finishSetup() {
+        val name = b.inputName.text.toString().trim()
+        val group = Prefs.normalizeGroup(b.inputGroup.text.toString())
+        // A person being woken is themselves the "sleeper"; a carer named someone.
+        val sleeper = if (pendingRole == "carer") b.inputSleeper.text.toString().trim() else name
+        prefs.name = name
+        prefs.role = pendingRole
+        prefs.sleeperName = sleeper
+        prefs.group = group
         route()
     }
 
@@ -324,9 +380,9 @@ class MainActivity : AppCompatActivity() {
             when (r.status) {
                 "confirmed" -> "✅  ${sleeper()} checked in" +
                         (if (r.confirmedNote != null) " — ${r.confirmedNote}" else "") +
-                        "  (${fmt(r.confirmedAt)})"
-                "cancelled" -> "⚪  Cancelled — false alarm  (${fmt(r.createdAt)})"
-                else -> "🔔  Alarm by $who  (${fmt(r.createdAt)})"
+                        "\n     ${fmtLog(r.confirmedAt)}"
+                "cancelled" -> "⚪  Cancelled — false alarm\n     ${fmtLog(r.createdAt)}"
+                else -> "🔔  Alarm by $who\n     ${fmtLog(r.createdAt)}"
             }
         }
     }
@@ -334,12 +390,22 @@ class MainActivity : AppCompatActivity() {
     private val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
         .apply { timeZone = TimeZone.getTimeZone("UTC") }
     private val outFmt = SimpleDateFormat("h:mm a", Locale.getDefault())
+    private val logFmt = SimpleDateFormat("EEE d MMM · h:mm a", Locale.getDefault())
 
     private fun fmt(iso: String?): String {
         if (iso.isNullOrBlank()) return ""
         return try {
             val clean = iso.substringBefore('.').substringBefore('+').removeSuffix("Z")
             outFmt.format(parser.parse(clean)!!)
+        } catch (_: Exception) { "" }
+    }
+
+    /** Date + time for log lines, e.g. "Sat 8 Nov · 3:14 AM" (shown in local time). */
+    private fun fmtLog(iso: String?): String {
+        if (iso.isNullOrBlank()) return ""
+        return try {
+            val clean = iso.substringBefore('.').substringBefore('+').removeSuffix("Z")
+            logFmt.format(parser.parse(clean)!!)
         } catch (_: Exception) { "" }
     }
 
